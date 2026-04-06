@@ -1,0 +1,7 @@
+.venv
+.aider.*
+test_*
+__pycache__
+.DS_Store
+data_json
+归档
