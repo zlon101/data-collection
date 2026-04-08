@@ -11,7 +11,7 @@ from langchain_core.messages import HumanMessage
 # 添加 lib 到 Python 路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "lib"))
 from browser import BrowserManager
-from custom_agent import create_custom_agent, add
+from ai_agent import create_custom_agent, add
 from puppeteer import get_browser_tools
 
 load_dotenv()

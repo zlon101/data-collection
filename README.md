@@ -1,90 +1,103 @@
-# 轻量级全栈数据采集与分析工作站 - 技术架构方案
+# 轻量级全栈数据采集与分析工作站
 
-## 一、 系统架构设计
-
-系统采用**前后端分离**架构，以 Python 后端为调度核心，通过本地文件系统（JSON）作为数据总线，串联采集、分析与展示三大模块。
-
-
-### 2. 核心模块划分
-1. **web前台**：与用户进行交互，修改配置文件，触发数据采集，展示数据等
-2. **采集引擎 (Collectors)**：对接各类底层的自动化库，执行具体的 UI 交互和页面解析。
-3. **AI 分析引擎 (Analyzer)**：读取原始 JSON，利用 LangChain 组装 Prompt，将非结构化文本转化为标准 JSON 字段。
-4. **统一文件总线 (File System)**：作为轻量级的“数据库”，定义明确的文件命名规范（如 `原始数据` 和 `分析后数据` 隔离存放）。
+本项目是一个基于 Python 和 Vue3 的全栈数据采集与 AI 分析平台，采用 **Monorepo (uv Workspace)** 架构设计，集成了网页抓取、移动端自动化、大模型结构化分析及数据可视化功能。
 
 ---
 
-## 二、 技术栈选型
+## 🚀 技术架构
 
-| 模块 | 技术栈 | 选择理由 |
+### 1. 核心技术栈
+| 模块 | 技术栈 | 说明 |
 | --- | --- | --- |
-| **基础环境** | macOS (M1), Python 3.11.8, `uv` | `uv` 是极速的 Python 依赖/环境管理器，M1 芯片性能强劲，完美适配本地开发。 |
-| **后端框架** | **FastAPI** | 极简、性能极高、原生支持异步（非常适合 I/O 密集型的网络爬虫和 API 调用），自带 Swagger 文档。 |
-| **Web 采集** | **Playwright** | 微软开源的现代化浏览器自动化工具，原生支持异步，绕过普通反爬机制能力强于 Requests。 |
-| **APP 采集** | **uiautomator2** | 针对普通 App，基于 Android UIA 框架，速度快，适合结构化控件抓取。 |
-| **微信采集** | **Airtest** | 针对微信等难以解析 UI 树的应用，基于图像识别进行操作和截图 OCR，兼容性好。 |
-| **AI 框架** | **LangChain** | 封装了各种外部大模型（OpenAI/智谱等）的调用接口，其 `OutputParsers` 极其适合强制 LLM 输出 JSON。 |
-| **前端框架** | **Vue3 + Vite + ECharts** | Vite 提供极速冷启动，ECharts 非常适合渲染基于 JSON 文件的统计图表。 |
+| **包管理** | `uv` | 现代 Python 极速依赖管理，支持 Workspace 模式 |
+| **后端** | **FastAPI** | 异步高性能 REST API，集成 Swagger 文档 |
+| **前端** | **Vue3 + Vite + ECharts** | 响应式仪表盘，数据大屏展示 |
+| **AI 引擎** | **LangChain** | 对接 Qwen/OpenAI，执行文章摘要、情感分析和实体提取 |
+| **数据采集** | **Playwright / Airtest** | 支持网页、Android App（微信等）的全自动化抓取 |
+| **存储** | **JSON File System** | 轻量级“文件即数据库”设计，通过 `common` 模块统一调度 |
 
 ---
 
-## 三、 代码目录结构规划
-
-推荐将前后端代码放在同一个大仓（Monorepo）下，方便一个人全栈开发。使用 `uv` 管理后端的虚拟环境。
+## 📁 目录结构 (Monorepo)
 
 ```text
-data_platform_workspace/
-├── frontend/                     # Web 前端目录 (Vite + Vue3)
-│   ├── package.json
-│   ├── src/
-│   │   ├── api/                  # 使用 fetch 调用后端接口
-│   │   ├── components/           # ECharts 图表组件、通用组件
-│   │   ├── views/                # 页面视图 (采集控制台、数据大屏等)
-│   │   └── App.vue
-├── backend/                      # Python FastAPI 后端目录
-│   ├── pyproject.toml            # uv 项目依赖配置
-│   ├── uv.lock                   # uv 锁定文件
-│   ├── main.py                   # FastAPI 入口文件
-│   ├── api/
-│   │   └── routes.py             # 提供给前端调用的 REST 接口
-│   │
-│   └── utils/
-│       └── file_manager.py       # JSON 文件的读写、重命名、归档等工具类
-│
-└── collection_platform/          # 数据采集模块
-│   ├── app_airtest/              # 基于 airtest 采集app（微信公众号）上的数据
-│   │
-│   └── app_uiautomator2/         # 基于 uiautomator2 采集app上的数据
-│   │
-│   └── browser_playwright/       # 基于 playwright 采集浏览器网页上的数据
-│
-└── ai_agent/                     # 基于 LangChain 的 LLM 模块
-│
-└── local_data/                   # 核心：本地数据存储层 (不提交到Git)
-    ├── raw/                      # 爬虫抓取的原始数据
-    │   ├── web_20260403.json
-    │   └── wechat_20260403.json
-    └── analyzed/                 # 经过 LLM 处理并提取好的结构化数据
-        ├── web_20260403_done.json
-        └── wechat_20260403_done.json
+data_collection_workspace/
+├── pyproject.toml              # 根目录：uv Workspace 配置及全局启动脚本
+├── .venv/                      # 整个工作区共享的 Python 虚拟环境
+├── backend/                    # FastAPI 后端模块 (Package: backend)
+│   ├── api/                    # 路由接口定义
+│   └── main.py                 # 后端入口
+├── frontend/                   # Vue3 前端模块 (Vite)
+│   ├── src/                    # 页面组件与 ECharts 逻辑
+│   └── package.json            # 前端依赖配置
+├── common/                     # 共享工具模块 (Package: common)
+│   └── file_manager.py         # 统一的数据读写与 local_data 管理
+├── ai_agent/                   # AI 分析模块 (Package: ai-agent)
+│   ├── llm_client.py           # LangChain 分析引擎
+│   └── agent_config.py         # Agent 策略配置
+├── collection_platform/        # 采集器集合
+│   ├── browser_playwright/     # 网页自动化采集 (Package)
+│   └── app_airtest/            # App 自动化采集 (Package)
+├── local_data/                 # 本地数据存储层 (不提交 Git)
+│   ├── raw/                    # 采集的原始 JSON 数据
+│   └── analyzed/               # LLM 处理后的结构化 JSON 数据
+└── .env                        # 环境配置 (API Keys, 数据库路径等)
 ```
+
 ---
 
-## 四、 核心业务数据流转
+## ✨ 核心功能
 
-1. **触发 (Trigger):** 页面上点击按钮触发采集
-2. **采集 (Collect):** 不同的采集平台使用不同的方式
-   - 微信公众号：代码位于 collection_platform/app_airtest
-     1. Airtest 脚本通过 ADB 连接到 Mac M1 上的 Android 真机。
-     2. 手动化打开微信 -> 进入公众号 -> 利用 Airtest 截图/读取文本。
-     3. `utils/file_manager.py` 将获取的文本列表存储为 `local_data/raw/wechat_公众号A_20260403.json`。
-   - 网页： 代码位于 collection_platform/browser_playwright
-   - 其他app: 代码位于 collection_platform/app_uiautomator2
-3. **分析 (Analyze):**
-   - 采集完成后，回调触发 `analyzer/llm_client.py`。
-   - LangChain 读取刚才的 raw JSON，注入 Prompt（例如：*“请分析以下文章，提取：1.核心人物 2.情感倾向(正/负/中) 3.摘要。请必须以严格的 JSON 格式返回”*）。
-   - 解析 LLM 结果，验证 JSON 格式无误后，存入 `local_data/analyzed/wechat_公众号A_20260403_done.json`。
-4. **展示 (Visualize):**
-   - 用户在浏览器打开 Vue 页面。
-   - 前端向 FastAPI 发起请求 `GET /api/data?source=wechat`。
-   - FastAPI 读取 `analyzed` 目录下的 JSON，返回给前端。
-   - 前端 Vue3 组件使用 ECharts 渲染“情感倾向饼图”和“核心人物词云”。
+1.  **全渠道采集**：
+    - **网页端**：利用 Playwright 模拟浏览器行为，绕过反爬机制。
+    - **移动端**：基于 Airtest 和 uiautomator2 采集微信公众号、APP 内容。
+2.  **AI 自动化分析**：
+    - 采集完成后自动触发 AI 分析。
+    - 提取：核心人物/组织、情感倾向（正/负/中）、100 字摘要。
+    - 支持 Mock 模式（未配置 API Key 时可演示全流程）。
+3.  **可视化仪表盘**：
+    - 展示文章总量统计。
+    - ECharts 渲染情感分布饼图。
+    - 核心实体词云/柱状图展示。
+    - 文章列表及分析结果实时预览。
+
+---
+
+## 🛠️ 快速上手
+
+### 1. 环境准备
+确保已安装 [uv](https://github.com/astral-sh/uv)：
+```bash
+# 克隆项目并安装所有依赖 (uv 会自动建立 Workspace 符号链接)
+uv sync
+```
+
+### 2. 配置文件
+复制并修改环境变量：
+```bash
+cp .env.example .env
+# 编辑 .env 配置 ALIBABA_API_KEY
+```
+
+### 3. 启动项目
+**后端 (API Server)**：
+```bash
+uv run uvicorn backend.main:app --reload --port 8000
+```
+
+**前端 (Dashboard)**：
+```bash
+cd frontend
+npm install
+npm run dev
+```
+访问 `http://localhost:5173` 查看仪表盘。
+
+---
+
+## 🏗️ 架构优势
+
+- **模块化解耦**：每个模块都是独立的 Python 包，支持跨项目导入。
+- **路径无关导入**：不再使用 `sys.path.insert`，直接通过包名 `import backend` 或 `import ai_agent`。
+- **高性能**：所有 Python 代码运行在同一个由 `uv` 管理的优化虚拟环境中。
+- **可扩展性**：轻松添加新的采集器或分析模型，只需在 `common` 模块中保持数据协议一致。

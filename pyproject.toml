@@ -1,0 +1,11 @@
+[project]
+name = "data-collection-platform"
+version = "0.1.0"
+description = "Lightweight full-stack data collection and analysis workstation"
+requires-python = ">=3.11.8"
+dependencies = [
+    "uvicorn[standard]>=0.27.0",
+]
+
+[tool.uv]
+workspace = { members = ["backend", "ai_agent", "collection_platform/*", "visualization", "common"] }

@@ -12,7 +12,7 @@ from langchain_core.messages import HumanMessage
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "lib"))
 from browser import BrowserManager
-from custom_agent import create_custom_agent
+from ai_agent import create_custom_agent
 from puppeteer import get_browser_tools, get_universal_scraping_tools
 
 load_dotenv()

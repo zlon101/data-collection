@@ -34,10 +34,6 @@ agent-python/
 │   │   ├── __init__.py
 │   │   ├── manager.py          # 浏览器管理器
 │   │   └── detector.py         # CDP 检测器
-│   ├── custom_agent/           # 自定义 Agent 模块
-│   │   ├── __init__.py
-│   │   ├── agent_config.py     # Agent 配置
-│   │   └── agent_tools.py      # 自定义工具
 │   ├── puppeteer/              # Puppeteer 工具模块
 │   │   ├── __init__.py
 │   │   ├── puppeteer_tools.py  # Playwright 工具包装
@@ -53,12 +49,7 @@ agent-python/
 │   │       ├── scraper.py       # 通用抓取核心
 │   │       ├── tools.py         # LangChain工具集成
 │   │       └── example.py       # 完整示例
-│   └── visualization/          # 任务可视化模块
-│       ├── __init__.py
-│       ├── ARCHITECTURE.md     # 架构文档
-│       ├── config.py           # 配置
-│       ├── examples.py         # 示例
-│       └── visualizer.py       # 可视化工具
+
 ├── scripts/                    # 脚本文件
 │   ├── brower.py               # 浏览器脚本
 │   └── scrape_table.py         # 表格抓取脚本

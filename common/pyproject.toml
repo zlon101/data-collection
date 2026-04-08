@@ -1,0 +1,8 @@
+[project]
+name = "common"
+version = "0.1.0"
+description = "Common Utilities for Data Collection Platform"
+requires-python = ">=3.11.8"
+dependencies = [
+    "python-dotenv>=1.0.0",
+]

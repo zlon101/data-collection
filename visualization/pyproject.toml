@@ -1,0 +1,8 @@
+[project]
+name = "visualization"
+version = "0.1.0"
+description = "Data visualization module for collection platform"
+requires-python = ">=3.11.8"
+dependencies = [
+    "matplotlib>=3.8.0",
+]
