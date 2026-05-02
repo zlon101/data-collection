@@ -9,6 +9,10 @@ dependencies = [
     "uiautomator2>=2.16.0",
 ]
 
+[tool.setuptools]
+packages = ["app_uiautomator2"]
+package-dir = { app_uiautomator2 = "." }
+
 [dependency-groups]
 dev = [
     "uiautodev>=0.14.0",

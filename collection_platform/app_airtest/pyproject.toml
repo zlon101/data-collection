@@ -9,6 +9,10 @@ dependencies = [
     "pocoui>=1.0.86",
 ]
 
+[tool.setuptools]
+packages = ["app_airtest"]
+package-dir = { app_airtest = "." }
+
 
 [tool.uv]
 override-dependencies = [

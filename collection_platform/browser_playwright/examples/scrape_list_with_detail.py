@@ -7,7 +7,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "lib"))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from browser import BrowserManager
 from puppeteer.universal_scraper import create_scraper_config
@@ -58,15 +58,13 @@ async def test_merged_scraper():
         list_config = create_scraper_config(
             url=page.url,  # 使用当前页面的URL
             fields={
-                "标题": "h3 a.text-body",
-                "摘要": ".excerpt",
-                "投票数": ".num-card .font-size-16",
-                "详情链接": "h3 a.text-body"  # 用于提取详情页URL
+                "标题": "h6 a.title",
+                "时间": ".info-wrap span.d-flex.align-items-center",
             },
-            container_selector=".list-group-item",
+            container_selector="li.item-wrap.py-3.list-group-item",
             next_button_selector="a.page-link[rel='next']",  # 下一页按钮
             delay=3.0,
-            max_pages=2  # 测试抓取2页
+            max_pages=1  # 测试抓取2页
         )
         
         # ========== 配置详情页抓取 ==========

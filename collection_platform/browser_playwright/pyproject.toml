@@ -79,6 +79,15 @@ dependencies = [
     "common",
 ]
 
+[tool.setuptools]
+packages = [
+    "browser",
+    "puppeteer",
+    "puppeteer.browser_steps",
+    "puppeteer.merged_scraper",
+    "puppeteer.universal_scraper",
+]
+
 [tool.uv.sources]
 ai-agent = { workspace = true }
 visualization = { workspace = true }

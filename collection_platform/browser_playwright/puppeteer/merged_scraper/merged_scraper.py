@@ -9,11 +9,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from playwright.async_api import Page, TimeoutError as PlaywrightTimeout
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from puppeteer.universal_scraper import UniversalScraper, FieldConfig
+from ..universal_scraper import UniversalScraper, FieldConfig
 from .config import MergedScraperConfig, NavigationMode
 
 

@@ -7,13 +7,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 from enum import Enum
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from puppeteer.universal_scraper import ScraperConfig, FieldConfig
-
-
+from ..universal_scraper import ScraperConfig, FieldConfig
 class NavigationMode(Enum):
     """页面导航模式"""
     GO_BACK = "go_back"  # 使用浏览器返回按钮

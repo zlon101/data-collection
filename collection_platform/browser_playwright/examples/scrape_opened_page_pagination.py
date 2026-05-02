@@ -6,7 +6,9 @@ import asyncio
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "lib"))
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from browser import BrowserManager
 from puppeteer import UniversalScraper, create_scraper_config
 
@@ -32,7 +34,7 @@ async def scrape_opened_page_with_pagination():
             return
 
         # 连接到已打开的页面
-        page = await bm.get_or_create_page(target_url="devops.aliyun.com")
+        page = await bm.get_or_create_page(target_url="https://segmentfault.com")
 
         if not page:
             print("❌ 未找到指定页面")
@@ -45,34 +47,16 @@ async def scrape_opened_page_with_pagination():
         fileName = "test_云效任务统计.json"
         config = create_scraper_config(
             url=page.url,
-            container_selector=".next-table-body tr.next-table-row",
+            container_selector="li.item-wrap.py-3.list-group-item",
             next_button_selector=".next-btn.next-pagination-item.next-next",  # 下一页按钮
             delay=3.0,  # 每页等待3秒
-            max_pages=2,  # 抓取2页
+            max_pages=1,  # 抓取2页
             fields={
-                "标题": ".yunxiao-projex-workitem-title",
-                "人天": ".TextAndNumberModifier--statusName--yXxCXqU",
-                "项目": ".newTable--spaceItemsWrapper--gRll8b3 .newTable--itemButton--nbzOwGl",
-                "迭代": "td .workitemList--sprintTriger--ta4dk92",
-                "版本": "td[data-next-table-col='10']",
+                "标题": "h3 a.title",
             },
         )
 
-        # 云效缺陷配置
-        if parseBug:
-            fileName = "test_云效bug统计.json"
-            config = create_scraper_config(
-                url=page.url,
-                container_selector=".next-table-body tr.next-table-row",
-                next_button_selector=".next-btn.next-pagination-item.next-next",  # 下一页按钮
-                delay=4.0,  # 每页等待3秒
-                max_pages=2,  # 抓取2页
-                fields={
-                    "标题": ".yunxiao-projex-workitem-title",
-                    "项目": ".newTable--spaceItemsWrapper--gRll8b3 .newTable--itemButton--nbzOwGl",
-                    "bug产生原因": "td[data-next-table-col='9'] em",
-                },
-            )
+        
 
         # 创建抓取器
         scraper = UniversalScraper(page, config)

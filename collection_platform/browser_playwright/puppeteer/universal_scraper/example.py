@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "lib"))
+
 from browser import BrowserManager
 from puppeteer.universal_scraper import UniversalScraper, create_scraper_config
 

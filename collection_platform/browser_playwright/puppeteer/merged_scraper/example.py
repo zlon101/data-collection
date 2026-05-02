@@ -7,8 +7,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-# 添加lib到路径
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# 添加项目根目录到路径，用于访问 ai_agent
 
 from browser import BrowserManager
 from puppeteer.universal_scraper import create_scraper_config

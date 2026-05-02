@@ -1,7 +1,27 @@
 #!/usr/bin/env python3
 """
-快速启动脚本 - 提供简单的命令行界面
+LangChain Browser Agent - 命令行入口脚本
+
+功能：
+  使用 LangChain Agent 驱动 Playwright 浏览器，通过自然语言指令完成 Web 自动化任务。
+  Agent 配备浏览器操作工具（点击、输入、截图、滚动等），可自主规划执行步骤。
+
+使用模式：
+  1. 单次任务:  --task "去 Google 搜索 AI 新闻"
+  2. 交互模式:  --interactive（持续对话，输入 quit 退出）
+  3. 连接已有:  --mode connect --cdp-url http://localhost:9222
+
+依赖：
+  - Playwright (浏览器控制)
+  - LangChain (Agent 框架)
+  - 大模型 (默认 qwen-plus，可通过 --model 切换)
+
+示例：
+  python brower.py --task "打开 baidu.com 并截图"
+  python brower.py --interactive --model qwen-max
+  python brower.py -m connect -t "获取当前页面标题"
 """
+
 import os
 import sys
 import asyncio
@@ -9,7 +29,7 @@ import argparse
 from pathlib import Path
 from dotenv import load_dotenv
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "lib"))
+
 from browser import BrowserManager
 from ai_agent import create_custom_agent, add
 from puppeteer import get_browser_tools

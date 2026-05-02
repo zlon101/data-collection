@@ -2,7 +2,7 @@
 
 # 通过命令行启动本地浏览器
 PORT=9422
-PROFILE_DIR="/Users/admins/Downloads/chrome-user-tmp"
+PROFILE_DIR="/Users/admin/Downloads/chrome-dev-user"
 # CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 CHROME_PATH="/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev"
 
