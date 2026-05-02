@@ -10,3 +10,4 @@ log.json
 .DS_Store
 test_*.json
 *.egg-info/
+data_json

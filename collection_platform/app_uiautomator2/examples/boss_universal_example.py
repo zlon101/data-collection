@@ -8,6 +8,7 @@ uv run examples/boss_universal_example.py
 
 import uiautomator2 as u2
 import sys
+from pathlib import Path
 import random
 from typing import Dict, Any
 import re
@@ -15,6 +16,7 @@ import time
 from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import (
     BlackCompany,
     JobKeys,
@@ -24,7 +26,7 @@ from config import (
     MoneyMin,
 )
 
-sys.path.append(".")
+
 from lib import ListPageSpider, ListPageSpiderParam, DetailPageSpiderUniversal
 from examples.merge_job_data import get_seen_unique_keys
 
@@ -33,9 +35,9 @@ now = datetime.now()
 seen_unique_keys: set[str] = get_seen_unique_keys()
 
 is_new_job_list = False
-is_search = True
-output_file = f"./data_json/boss_{now.strftime('%m%d_%H%M')}.json"
-max_items = 30
+is_search = False
+output_file = str(Path.cwd() / "data_json" / f"boss_{now.strftime('%m%d_%H%M')}.json")
+max_items = 3
 
 def main():
     console.print(

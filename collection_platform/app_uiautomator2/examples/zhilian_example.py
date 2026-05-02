@@ -7,12 +7,15 @@ uv run examples/xxx.py
 
 import uiautomator2 as u2
 import sys
+from pathlib import Path
 from typing import Dict, Any
 import re
 import time
 from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import (
     BlackCompany,
     JobKeys,
@@ -22,7 +25,6 @@ from config import (
     parse_money,
 )
 
-sys.path.append(".")
 from lib import ListPageSpider, ListPageSpiderParam, DetailPageSpiderUniversal
 from examples.merge_job_data import get_seen_unique_keys
 
