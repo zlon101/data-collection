@@ -8,4 +8,4 @@ dependencies = [
 ]
 
 [tool.uv]
-workspace = { members = ["backend", "ai_agent", "collection_platform/*", "visualization", "common"] }
+workspace = { members = ["backend", "ai_agent", "collection_platform/browser_playwright", "collection_platform/app_uiautomator2", "visualization", "common"] }
