@@ -27,9 +27,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ├── common/                     # 共享工具 (file_manager.py)
 ├── ai_agent/                   # AI 分析 (LangChain)
 ├── collection_platform/
-│   ├── browser_playwright/     # 网页自动化 (属于 workspace)
+│   ├── browser_playwright/     # 网页自动化 (workspace member)
+│   │   └── browser_playwright/ # 可导入的 Python 包
+│   │       ├── browser/        # BrowserManager, detector
+│   │       ├── puppeteer/      # 采集工具 (universal, merged, network_intercept)
+│   │       └── examples/       # 示例脚本
 │   ├── app_airtest/            # App 自动化 (独立 venv，numpy<2)
-│   └── app_uiautomator2/       # App UI 自动化 (属于 workspace)
+│   ├── app_uiautomator2/       # App UI 自动化 (workspace member)
+│   │   └── app_uiautomator2/   # 可导入的 Python 包
+│   │       ├── lib/            # 爬虫框架
+│   │       └── examples/       # 示例脚本
+│   └── wx/                     # 微信公众号采集 (workspace member)
+│       └── wx/                 # 可导入的 Python 包
 ├── visualization/              # 数据可视化
 └── local_data/                 # 本地 JSON 存储 (不提交 Git)
 ```
@@ -39,7 +48,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 环境安装
 
 ```bash
-uv sync                          # 安装 workspace 成员依赖
+uv sync --all-packages             # 安装所有 workspace 成员依赖
 ```
 
 ### 启动服务
@@ -57,12 +66,15 @@ cd frontend && npm install && npm run dev
 ### 运行示例
 
 ```bash
-# browser_playwright 示例（从根目录直接运行）
-uv run python collection_platform/browser_playwright/examples/scrape_opened_page_pagination.py
-uv run python collection_platform/browser_playwright/examples/scrape_list_with_detail.py
+# browser_playwright — 通过 --package 执行包内示例
+uv run --package browser-playwright python -m browser_playwright.examples.scrape_opened_page_pagination
+uv run --package browser-playwright python -m browser_playwright.examples.scrape_list_with_detail
 
-# app_uiautomator2 示例
-uv run python collection_platform/app_uiautomator2/examples/boss_universal_example.py
+# app_uiautomator2 — 通过 --package 执行包内示例
+uv run --package app-script python -m app_uiautomator2.examples.boss_universal_example
+
+# wx — 微信公众号采集
+uv run --package data-collection-platform python -m wx.get_articles
 
 # app_airtest 测试（使用独立 venv）
 collection_platform/app_airtest/.venv/bin/python collection_platform/app_airtest/tests/test_connection.py
@@ -76,16 +88,24 @@ cd frontend && npm run build
 
 ## 架构要点
 
+### 包结构与导入规则
+
+所有 workspace member 遵循 **目录名 = 包名**：
+
+| workspace member | 可导入包名 | 导入示例 |
+|---|---|---|
+| `browser_playwright/` | `browser_playwright` | `from browser_playwright.browser import BrowserManager` |
+| `app_uiautomator2/` | `app_uiautomator2` | `from app_uiautomator2.lib import ListPageSpider` |
+| `wx/` | `wx` | `from wx.get_articles import collect_api_data` |
+| `ai_agent/` | `ai_agent` | `from ai_agent.llm_client import analyze_articles` |
+| `common/` | `common` | `from common import file_manager` |
+
+Workspace 成员之间的依赖使用 `[tool.uv.sources]` 声明 `{ workspace = true }`，具体版本由 `uv.lock` 锁定。**禁止使用 `sys.path.insert`**。
+
 ### 依赖环境
 
-- **Workspace 成员**（browser_playwright、app_uiautomator2、backend、ai_agent 等）：使用根目录 `uv sync` 安装的 `.venv`。
+- **Workspace 成员**（browser_playwright、app_uiautomator2、wx、backend、ai_agent 等）：使用根目录 `uv sync --all-packages` 安装的 `.venv`。
 - **app_airtest 独立 venv**：位于 `collection_platform/app_airtest/.venv`，因 `airtest`/`pocoui` 依赖 `numpy<2.0`，无法与 workspace 的 `numpy>=2` 共存。
-
-### 模块化解耦
-
-Workspace 成员通过 `uv sync` 建立的符号链接实现跨模块导入。**不要使用 `sys.path.insert`**，直接通过包名导入。
-
-`collection_platform/*/examples/` 下的示例文件使用 `sys.path.insert` 以支持从根目录直接 `uv run python` 运行单个文件。
 
 ### 数据流
 

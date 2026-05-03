@@ -3,14 +3,9 @@
 """
 
 import asyncio
-import sys
-from pathlib import Path
 
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from browser import BrowserManager
-from puppeteer import UniversalScraper, create_scraper_config
+from browser_playwright.browser import BrowserManager
+from browser_playwright.puppeteer import UniversalScraper, create_scraper_config
 
 
 async def scrape_opened_page_with_pagination():

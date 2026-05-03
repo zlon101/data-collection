@@ -4,14 +4,10 @@ Example Usage of Merged Scraper
 """
 
 import asyncio
-import sys
-from pathlib import Path
 
-# 添加项目根目录到路径，用于访问 ai_agent
-
-from browser import BrowserManager
-from puppeteer.universal_scraper import create_scraper_config
-from puppeteer.merged_scraper import (
+from browser_playwright.browser import BrowserManager
+from browser_playwright.puppeteer.universal_scraper import create_scraper_config
+from browser_playwright.puppeteer.merged_scraper import (
     MergedScraper,
     MergedScraperConfig,
     create_merged_scraper_config
@@ -202,7 +198,7 @@ async def example_4_custom_config():
         page = await bm.get_or_create_page()
         
         # 使用MergedScraperConfig类进行详细配置
-        from puppeteer.universal_scraper import FieldConfig, ScraperConfig
+        from browser_playwright.puppeteer.universal_scraper import FieldConfig, ScraperConfig
         
         list_config = ScraperConfig(
             url="https://segmentfault.com/",

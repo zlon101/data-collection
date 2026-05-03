@@ -30,9 +30,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-from browser import BrowserManager
+from browser_playwright.browser import BrowserManager
 from ai_agent import create_custom_agent, add
-from puppeteer import get_browser_tools
+from browser_playwright.puppeteer import get_browser_tools
 
 load_dotenv()
 

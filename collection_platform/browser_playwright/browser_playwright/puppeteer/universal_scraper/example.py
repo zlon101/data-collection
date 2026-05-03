@@ -4,14 +4,11 @@
 """
 
 import asyncio
-import sys
 import os
-from pathlib import Path
 from dotenv import load_dotenv
 
-
-from browser import BrowserManager
-from puppeteer.universal_scraper import UniversalScraper, create_scraper_config
+from browser_playwright.browser import BrowserManager
+from browser_playwright.puppeteer.universal_scraper import UniversalScraper, create_scraper_config
 
 load_dotenv()
 
@@ -137,7 +134,7 @@ async def example_extract_attributes():
     print("📌 示例 4: 提取属性值")
     print("="*60 + "\n")
     
-    from puppeteer.universal_scraper.scraper import FieldConfig, ScraperConfig
+    from browser_playwright.puppeteer.universal_scraper.scraper import FieldConfig, ScraperConfig
     
     async with BrowserManager(mode="launch", headless=False) as bm:
         page = await bm.get_or_create_page()

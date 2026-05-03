@@ -7,8 +7,5 @@ dependencies = [
     "browser-playwright",
 ]
 
-[tool.setuptools]
-packages = ["wx"]
-
 [tool.uv.sources]
 browser-playwright = { workspace = true }

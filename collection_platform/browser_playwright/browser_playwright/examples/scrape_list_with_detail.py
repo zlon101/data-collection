@@ -4,14 +4,10 @@
 """
 
 import asyncio
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from browser import BrowserManager
-from puppeteer.universal_scraper import create_scraper_config
-from puppeteer.merged_scraper import MergedScraper, create_merged_scraper_config
+from browser_playwright.browser import BrowserManager
+from browser_playwright.puppeteer.universal_scraper import create_scraper_config
+from browser_playwright.puppeteer.merged_scraper import MergedScraper, create_merged_scraper_config
 
 
 async def test_merged_scraper():

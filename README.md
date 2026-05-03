@@ -33,9 +33,19 @@
 │   └── file_manager.py         # 统一的数据读写与 local_data 管理
 ├── ai_agent/                   # AI 分析模块 (LangChain)
 ├── collection_platform/        # 采集器集合
-│   ├── browser_playwright/     # 网页自动化采集 (属于 workspace)
+│   ├── browser_playwright/     # 网页自动化采集 (workspace member)
+│   │   ├── browser_playwright/ # 可导入的 Python 包
+│   │   │   ├── browser/        # 浏览器管理 (BrowserManager)
+│   │   │   ├── puppeteer/      # 自动化采集工具
+│   │   │   └── examples/       # 示例脚本
+│   │   └── scripts/            # CLI 入口脚本
 │   ├── app_airtest/            # App 自动化采集 (独立 venv，见下方说明)
-│   └── app_uiautomator2/       # App UI 自动化采集 (属于 workspace)
+│   ├── app_uiautomator2/       # App UI 自动化采集 (workspace member)
+│   │   └── app_uiautomator2/   # 可导入的 Python 包
+│   │       ├── lib/            # 爬虫框架
+│   │       └── examples/       # 示例脚本
+│   └── wx/                     # 微信公众号采集 (workspace member)
+│       └── wx/                 # 可导入的 Python 包
 ├── visualization/              # 数据可视化模块
 ├── local_data/                 # 本地数据存储层 (不提交 Git)
 │   ├── raw/                    # 采集的原始 JSON 数据
@@ -67,8 +77,8 @@
 ### 1. 环境准备
 
 ```bash
-# 安装 workspace 依赖（browser_playwright, app_uiautomator2, backend, ai_agent 等）
-uv sync
+# 安装 workspace 依赖
+uv sync --all-packages
 ```
 
 ### 2. app_airtest 独立环境
@@ -109,34 +119,71 @@ npm run dev
 
 ## 📝 运行示例
 
-### 运行 browser_playwright 示例
+### browser_playwright — 网页采集
 
-从项目根目录直接运行：
+通过 `uv run --package` 执行包内示例：
+
 ```bash
-uv run python collection_platform/browser_playwright/examples/scrape_opened_page_pagination.py
-uv run python collection_platform/browser_playwright/examples/scrape_list_with_detail.py
+# 已打开的页面分页抓取
+uv run --package browser-playwright python -m browser_playwright.examples.scrape_opened_page_pagination
+
+# 列表+详情页合并抓取
+uv run --package browser-playwright python -m browser_playwright.examples.scrape_list_with_detail
+
+# LangChain 浏览器 Agent
+uv run --package browser-playwright python collection_platform/browser_playwright/scripts/browser.py --task "去 Google 搜索"
 ```
 
-### 运行 app_airtest 测试
+### app_uiautomator2 — App 采集
 
-使用独立 venv 中的 Python：
+```bash
+uv run --package app-script python -m app_uiautomator2.examples.boss_universal_example
+uv run --package app-script python -m app_uiautomator2.examples.zhilian_example
+```
+
+### wx — 微信公众号采集
+
+```bash
+uv run --package data-collection-platform python -m wx.get_articles
+```
+
+### app_airtest — 独立环境测试
+
 ```bash
 collection_platform/app_airtest/.venv/bin/python collection_platform/app_airtest/tests/test_connection.py
 ```
 
-### 运行 app_uiautomator2 示例
-
-从项目根目录直接运行：
-```bash
-uv run python collection_platform/app_uiautomator2/examples/boss_universal_example.py
-uv run python collection_platform/app_uiautomator2/examples/zhilian_example.py
-```
-
 ---
 
-## 🏗️ 架构优势
+## 🏗️ 架构要点
 
-- **模块化解耦**：每个模块都是独立的 Python 包，支持跨项目导入。
-- **路径无关导入**：不再使用 `sys.path.insert`，直接通过包名 `import backend` 或 `import ai_agent`。
-- **高性能**：所有 Python 代码运行在同一个由 `uv` 管理的优化虚拟环境中。
-- **可扩展性**：轻松添加新的采集器或分析模型，只需在 `common` 模块中保持数据协议一致。
+### 包结构设计
+
+所有 workspace member 遵循 **目录名 = 包名** 原则：
+
+| workspace member | 可导入包名 | 说明 |
+|---|---|---|
+| `browser_playwright/` | `browser_playwright` | 内部包含 `browser/`、`puppeteer/`、`examples/` 子包 |
+| `app_uiautomator2/` | `app_uiautomator2` | 内部包含 `lib/`、`examples/` 子包 |
+| `wx/` | `wx` | 微信公众号采集模块 |
+| `ai_agent/` | `ai_agent` | LangChain AI 分析引擎 |
+| `common/` | `common` | 共享工具模块 |
+| `visualization/` | `visualization` | 数据可视化 |
+
+### 依赖管理
+
+- workspace member 之间的依赖使用 `>=` 范围约束，具体版本由 `uv.lock` 锁定
+- 跨模块导入通过 `[tool.uv.sources]` 声明 `{ workspace = true }`
+- **禁止使用 `sys.path.insert`**，所有导入通过 uv editable install 解析
+
+### 数据流
+
+1. 采集器 → 原始 JSON 存入 `local_data/raw/`
+2. 后端调用 `ai_agent` 进行 LLM 分析 → 结果存入 `local_data/analyzed/`
+3. 前端通过后端 API 读取分析结果并可视化
+
+### Playwright 浏览器模式
+
+`.env` 中的 `BROWSER_MODE` 控制：
+- `launch`: 启动新的 Chromium 实例
+- `connect`: 连接到已有 Chrome (需先启动 `--remote-debugging-port`)

@@ -5,7 +5,12 @@ description = "Lightweight full-stack data collection and analysis workstation"
 requires-python = ">=3.11.8"
 dependencies = [
     "uvicorn[standard]>=0.27.0",
+    "wx",
 ]
 
 [tool.uv]
 workspace = { members = ["backend", "ai_agent", "collection_platform/browser_playwright", "collection_platform/app_uiautomator2", "collection_platform/wx", "visualization", "common"] }
+
+[tool.uv.sources]
+wx = { workspace = true }
+app-script = { workspace = true }

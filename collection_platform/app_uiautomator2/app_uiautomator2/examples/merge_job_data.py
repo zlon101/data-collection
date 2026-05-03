@@ -1,13 +1,11 @@
-import os
 import json
+import os
 import re
-from pathlib import Path
-import sys
 from datetime import datetime
-from typing import Dict, List, Any
+from pathlib import Path
+from typing import Any, Dict, List
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import SpeicalRe, parse_money
+from app_uiautomator2.examples.config import SpeicalRe, parse_money
 
 now = datetime.now()
 merged_file_name = f"merged_data_{now.strftime('%m%d')}.json"

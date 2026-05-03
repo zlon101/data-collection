@@ -2,31 +2,29 @@
 # -*- coding: utf-8 -*-
 """
 智联
-uv run examples/xxx.py
+uv run --package app-script app_uiautomator2.examples.zhilian_example
 """
 
-import uiautomator2 as u2
-import sys
-from pathlib import Path
-from typing import Dict, Any
 import re
 import time
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict
+
+import uiautomator2 as u2
 from rich.console import Console
 from rich.panel import Panel
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import (
+from app_uiautomator2.examples.config import (
     BlackCompany,
     JobKeys,
-    SpeicalRe,
     MAX_DISTANCE,
     MoneyMin,
+    SpeicalRe,
     parse_money,
 )
-
-from lib import ListPageSpider, ListPageSpiderParam, DetailPageSpiderUniversal
-from examples.merge_job_data import get_seen_unique_keys
+from app_uiautomator2.examples.merge_job_data import get_seen_unique_keys
+from app_uiautomator2.lib import DetailPageSpiderUniversal, ListPageSpider, ListPageSpiderParam
 
 console = Console()
 now = datetime.now()

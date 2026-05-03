@@ -1,21 +1,15 @@
 """
-网络拦截采集示例 — 通过监听 API 响应抓取分页数据
-
-使用场景：
-    页面中有一个分页表格，数据来自某个 API 接口。
-    不需要解析 DOM，直接收集 API 返回的 JSON 数据。
+1. 命令行启动浏览器
+2. 打开 https://mp.weixin.qq.com/，打开文章列表弹窗
+3. 运行该文件
 """
 
 import asyncio
 import json
 import re
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from browser import BrowserManager
-from puppeteer.network_intercept import ApiCollectorConfig, ApiCollector
+from browser_playwright.browser import BrowserManager
+from browser_playwright.puppeteer.network_intercept import ApiCollectorConfig, ApiCollector
 
 
 def format_articles(all_data: list[dict]) -> list[dict]:
@@ -95,5 +89,23 @@ async def collect_api_data():
             print("⚠️ 未采集到数据")
 
 
+async def main():
+    print("\n⚠️ 准备工作:")
+    print("   1. 启动 Chrome: chrome.exe --remote-debugging-port=9222")
+    print("   2. 打开要抓取的网页")
+
+    try:
+        await collect_api_data()
+    except ConnectionError as e:
+        print(f"\n❌ 连接失败: {e}")
+        print("\n💡 解决方法:")
+        print("   1. 启动 Chrome: chrome.exe --remote-debugging-port=9222")
+        print("   2. 重新运行")
+    except Exception as e:
+        print(f"\n❌ 错误: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 if __name__ == "__main__":
-    asyncio.run(collect_api_data())
+    asyncio.run(main())
