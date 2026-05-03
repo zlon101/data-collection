@@ -29,6 +29,10 @@ from .browser_steps import (
     create_press_key_step,
     create_wait_step
 )
+from .network_intercept import (
+    ApiCollector,
+    ApiCollectorConfig,
+)
 
 __all__ = [
     "get_browser_tools",
@@ -51,4 +55,6 @@ __all__ = [
     "create_extract_step",
     "create_press_key_step",
     "create_wait_step",
+    "ApiCollector",
+    "ApiCollectorConfig",
 ]

@@ -106,3 +106,22 @@ Workspace 成员通过 `uv sync` 建立的符号链接实现跨模块导入。**
 `.env` 中的 `BROWSER_MODE` 控制：
 - `launch`: 启动新的 Chromium 实例
 - `connect`: 连接到已有 Chrome (需先启动 `--remote-debugging-port`)
+
+### Python 类型声明规范
+
+项目要求 Python `>=3.11.8`，所有类型声明**必须使用最新的 Python 3 语法**，禁止使用 `typing` 模块中的旧式别名：
+
+| 场景 | 现代语法 (✅) | 旧式语法 (❌) |
+|------|-------------|-------------|
+| 内置泛型 | `list[str]`, `dict[str, int]`, `set[int]`, `tuple[int, str]` | `List[str]`, `Dict[str, int]`, `Set[int]`, `Tuple[int, str]` |
+| 联合类型 | `str \| None`, `int \| float` | `Optional[str]`, `Union[int, float]` |
+| 可调用 | `collections.abc.Callable[[int], str]` | `typing.Callable[[int], str]` |
+| 类型别名 | `type UserId = int` (PEP 695, 3.12+) 或 `UserId: TypeAlias = int` | `UserId = int` |
+| self 类型 | `Self` (PEP 673) | 字符串前引用 `"MyClass"` |
+| 可选参数 | `def foo(x: int \| None = None)` | `def foo(x: Optional[int] = None)` |
+
+**额外要求**：
+- 使用 `collections.abc` 中的协议类型（`Callable`, `Iterator`, `Sequence`, `Mapping` 等），而非 `typing` 中的版本
+- 函数返回值中的 `None` 必须显式声明：`def foo() -> None`
+- 使用 `@override` 装饰器标注覆写方法（PEP 698, 3.12+）
+- 优先使用 `@dataclass` 而非裸 `dict` 传输数据

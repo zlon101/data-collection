@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "collection_platform/browser_playwright"
+    ]
+}

@@ -1,0 +1,14 @@
+[project]
+name = "wx"
+version = "0.1.0"
+description = "微信公众号采集模块"
+requires-python = ">=3.11.8"
+dependencies = [
+    "browser-playwright",
+]
+
+[tool.setuptools]
+packages = ["wx"]
+
+[tool.uv.sources]
+browser-playwright = { workspace = true }
