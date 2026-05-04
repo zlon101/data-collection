@@ -3,10 +3,9 @@ Chrome DevTools Protocol (CDP) 端口检测模块
 """
 
 import asyncio
-from typing import Optional
 
 
-async def find_chrome_cdp_url(ports: list[int] = [9422, 9222, 9223, 9224]) -> Optional[str]:
+async def find_chrome_cdp_url(ports: list[int] | None = None) -> str | None:
     """
     自动查找可用的 Chrome CDP 端口
     Args:
@@ -15,6 +14,8 @@ async def find_chrome_cdp_url(ports: list[int] = [9422, 9222, 9223, 9224]) -> Op
         str: CDP URL (例如 "http://localhost:9222")
         None: 如果未找到可用端口
     """
+    if ports is None:
+        ports = [9422, 9222, 9223, 9224]
     try:
         import aiohttp
     except ImportError:

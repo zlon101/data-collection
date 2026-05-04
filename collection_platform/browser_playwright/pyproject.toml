@@ -79,6 +79,10 @@ dependencies = [
     "common",
 ]
 
+[tool.setuptools]
+packages = ["browser_playwright"]
+package-dir = { browser_playwright = "." }
+
 [tool.uv.sources]
 ai-agent = { workspace = true }
 visualization = { workspace = true }

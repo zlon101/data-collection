@@ -34,7 +34,9 @@ seen_unique_keys: set[str] = get_seen_unique_keys()
 
 is_new_job_list = False
 is_search = False
-output_file = str(Path.cwd() / "data_json" / f"boss_{now.strftime('%m%d_%H%M')}.json")
+output_file = str(
+    Path.cwd() / "local_data" / "job" / f"boss_{now.strftime('%m%d_%H%M')}.json"
+)
 max_items = 3
 
 def main():

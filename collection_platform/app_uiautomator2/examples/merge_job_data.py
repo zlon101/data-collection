@@ -12,13 +12,13 @@ merged_file_name = f"merged_data_{now.strftime('%m%d')}.json"
 # 获取当前脚本所在目录 (__dirname)
 current_dir = Path(__file__).resolve().parent
 # 构造目标和输出路径
-data_json_dir = current_dir.parent / "data_json"
+data_json_dir = current_dir.parent / "local_data" / "job"
 output_path = data_json_dir / merged_file_name
 
 
 def merge_and_deduplicate_data():
     """
-    批量读取 data_json 目录中的所有 json 文件，合并并按 unique_key 去重
+    批量读取 job 目录中的所有 json 文件，合并并按 unique_key 去重
     """
     try:
         all_data = merge_all_json()
@@ -70,7 +70,7 @@ def merge_all_json() -> list[dict[str, Any]]:
     if not data_json_dir.exists():
         raise FileNotFoundError(f"目录不存在: {data_json_dir}")
 
-    # 读取 data_json 目录中的所有 .json 文件
+    # 读取 job 目录中的所有 .json 文件
     files = os.listdir(data_json_dir)
     json_files = [f for f in files if f.endswith(".json")]
 
@@ -125,7 +125,7 @@ def del_files():
     if not data_json_dir.exists():
         raise FileNotFoundError(f"目录不存在: {data_json_dir}")
 
-    # 读取 data_json 目录中的所有 .json 文件
+    # 读取 job 目录中的所有 .json 文件
     files = os.listdir(data_json_dir)
     json_files = [f for f in files if f.endswith(".json") and f != merged_file_name]
     for item in json_files:

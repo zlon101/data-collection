@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
-from config import CHART_CONFIG
+from .config import CHART_CONFIG
 
 # 解决中文显示问题
 matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'STHeiti']

@@ -31,7 +31,7 @@ now = datetime.now()
 seen_unique_keys: set[str] = get_seen_unique_keys()
 
 is_search = True  # 搜索后的列表
-output_file = f"./data_json/智联_{now.strftime('%m%d_%H%M')}.json"
+output_file = f"./local_data/job/智联_{now.strftime('%m%d_%H%M')}.json"
 max_items = 20
 
 def main():

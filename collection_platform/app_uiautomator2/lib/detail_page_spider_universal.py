@@ -6,7 +6,8 @@
 
 import uiautomator2 as u2
 import time
-from typing import Dict, Any, List, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 from rich.console import Console
 from .universal_page_parser import UniversalPageParser
 from .exceptions import (
@@ -27,9 +28,9 @@ class DetailPageSpider:
     def __init__(
         self,
         device: u2.Device,
-        detail_selectors: Dict[str, Dict[str, Any]],
+        detail_selectors: dict[str, dict[str, Any]],
         bottom_indicator_resourceId: str,
-        generate_unique_key: Callable[[Dict[str, Any]], str],
+        generate_unique_key: Callable[[dict[str, Any]], str],
         max_scroll_times: int = 5,
         scroll_from: float = 0.7,
         scroll_to: float = 0.3,
@@ -37,7 +38,7 @@ class DetailPageSpider:
         scroll_wait: float = 0.5,
         click_wait: float = 1.0,
         back_wait: float = 1.0,
-        custom_stop: Callable[[Dict[str, Any]], bool] | None = None,
+        custom_stop: Callable[[dict[str, Any]], bool] | None = None,
         verbose: bool = False,
     ):
         """
@@ -74,7 +75,7 @@ class DetailPageSpider:
             verbose=verbose
         )
 
-    def parse_and_return(self) -> Dict[str, str]:
+    def parse_and_return(self) -> dict[str, str]:
         """
         解析当前详情页并返回列表页。
         供新版 ListPageSpider 使用：点击由 ListPageSpider 负责，

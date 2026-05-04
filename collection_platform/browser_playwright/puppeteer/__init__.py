@@ -34,6 +34,8 @@ from .network_intercept import (
     ApiCollectorConfig,
 )
 
+from .recruit_capture import capture_recruit_page
+
 __all__ = [
     "get_browser_tools",
     "get_universal_scraping_tools",
@@ -57,4 +59,5 @@ __all__ = [
     "create_wait_step",
     "ApiCollector",
     "ApiCollectorConfig",
+    "capture_recruit_page",
 ]

@@ -4,7 +4,6 @@ Agent 配置模块
 """
 
 import os
-from typing import List
 from pydantic import SecretStr
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
@@ -64,7 +63,7 @@ def create_llm(
 
 
 def create_custom_agent(
-    tools: List[BaseTool],
+    tools: list[BaseTool],
     api_key: str = "",
     base_url: str = "",
     model: str = "qwen-plus",

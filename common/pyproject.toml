@@ -5,4 +5,9 @@ description = "Common Utilities for Data Collection Platform"
 requires-python = ">=3.11.8"
 dependencies = [
     "python-dotenv>=1.0.0",
+    "rapidocr_onnxruntime>=1.4.0",
+    "Pillow>=10.0.0",
 ]
+
+[tool.setuptools]
+py-modules = ["file_manager", "ocr_tools"]

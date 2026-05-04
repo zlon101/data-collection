@@ -5,7 +5,7 @@
 
 import os
 from dotenv import load_dotenv
-from typing import Optional, Literal, TYPE_CHECKING
+from typing import Literal, TYPE_CHECKING
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 
 if TYPE_CHECKING:
@@ -22,12 +22,12 @@ class BrowserManager:
         self,
         mode: Literal["launch", "connect"] = "launch",
         headless: bool = False,
-        cdp_url: Optional[str] = None,
-        cdp_ports: list[int] = [9222, 9223, 9224]
+        cdp_url: str | None = None,
+        cdp_ports: list[int] | None = None
     ):
         """
         初始化浏览器管理器
-        
+
         Args:
             mode: 浏览器模式
                 - "launch": 启动新的 Chromium 实例
@@ -39,10 +39,10 @@ class BrowserManager:
         self.mode = mode
         self.headless = headless
         self.cdp_url = cdp_url = os.getenv("CDP_URL") or cdp_url
-        self.cdp_ports = cdp_ports
+        self.cdp_ports = cdp_ports if cdp_ports is not None else [9222, 9223, 9224]
         
-        self.browser: Optional[Browser] = None
-        self.playwright: Optional["Playwright"] = None
+        self.browser: Browser | None = None
+        self.playwright: "Playwright" | None = None
         self._is_external_browser = False
     
     async def __aenter__(self):
@@ -107,7 +107,7 @@ class BrowserManager:
                 f"Failed to connect to Chrome at {self.cdp_url}: {str(e)}"
             )
     
-    async def get_or_create_page(self, target_url: Optional[str] = None) -> Page:
+    async def get_or_create_page(self, target_url: str | None = None) -> Page:
         """
         获取当前页面或创建新页面
         
@@ -156,10 +156,10 @@ class BrowserManager:
         return pages[-1]
     
     async def find_page_by_url(
-        self, 
-        target_url: str, 
+        self,
+        target_url: str,
         exact_match: bool = False
-    ) -> Optional[Page]:
+    ) -> Page | None:
         """
         在所有打开的标签页中查找匹配指定URL的页面
         

@@ -10,11 +10,8 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = [
-    "app_uiautomator2",
-    "app_uiautomator2.lib",
-    "app_uiautomator2.examples",
-]
+packages = ["app_uiautomator2"]
+package-dir = { app_uiautomator2 = "." }
 
 [dependency-groups]
 dev = [

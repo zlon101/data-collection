@@ -9,9 +9,10 @@ import uiautomator2 as u2
 import time
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Set, Optional, Callable, Tuple
+from typing import Any
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
@@ -65,10 +66,10 @@ class ListPageSpider:
 
     def __init__(self, config: ListPageSpiderParam):
         self.config = config
-        self.data_list: List[Dict[str, Any]] = []
-        self.seen_items: Set[str] = set()
+        self.data_list: list[dict[str, Any]] = []
+        self.seen_items: set[str] = set()
 
-    def crawl(self) -> List[Dict[str, Any]]:
+    def crawl(self) -> list[dict[str, Any]]:
         """开始抓取列表数据"""
         console.print(
             f"\n[cyan]开始流式抓取，目标: {self.config.max_items} 条[/cyan]\n"
@@ -198,13 +199,13 @@ class ListPageSpider:
                 break
         return new_items_count
 
-    def _snapshot_current_page(self) -> List[Dict[str, Any]]:
+    def _snapshot_current_page(self) -> list[dict[str, Any]]:
         """
         阶段一：纯快照，零跳转。
         遍历当前屏所有可见容器，收集列表字段数据，返回待处理项列表。
         整个过程不做任何页面跳转，最大程度避免 race condition。
         """
-        pending_items: List[Dict[str, Any]] = []
+        pending_items: list[dict[str, Any]] = []
         containers = self.config.device(resourceId=self.config.item_selector)
         container_count = containers.count
         has_visible_item = False
@@ -237,8 +238,8 @@ class ListPageSpider:
             raise ValueError("容器定位错误，请检查配置项")
         return pending_items
 
-    def _parse_container_item(self, container_item: u2.UiObject) -> Tuple[Dict[str, str], bool]:
-        field_value: Dict[str, Any] = {}
+    def _parse_container_item(self, container_item: u2.UiObject) -> tuple[dict[str, str], bool]:
+        field_value: dict[str, Any] = {}
         has_valid_data = False
         for field_name, selector_config in self.config.selectors.items():
             try:
