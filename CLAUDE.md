@@ -13,9 +13,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 包管理 | uv (workspace 模式) |
 | 后端 | FastAPI (异步 REST API) |
 | 前端 | Vue3 + Vite + ECharts |
-| AI 引擎 | LangChain + Qwen/OpenAI |
-| 网页采集 | Playwright |
+| AI 引擎 | LangChain + Qwen (DashScope) |
+| 网页采集 | Playwright (CDP 连接 / Launch) |
 | 移动端采集 | Airtest (独立 venv) / uiautomator2 (workspace) |
+| OCR | rapidocr_onnxruntime (可选) |
 | 存储 | JSON 文件系统 (local_data/) |
 
 ## 目录结构
@@ -24,23 +25,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ├── pyproject.toml              # uv workspace 根配置
 ├── backend/                    # FastAPI 后端
 ├── frontend/                   # Vue3 前端
-├── common/                     # 共享工具 (file_manager.py)
+├── common/                     # 共享工具 (file_manager.py, ocr_tools.py)
 ├── ai_agent/                   # AI 分析 (LangChain)
 ├── collection_platform/
 │   ├── browser_playwright/     # 网页自动化 (workspace member)
-│   │   └── browser_playwright/ # 可导入的 Python 包
-│   │       ├── browser/        # BrowserManager, detector
-│   │       ├── puppeteer/      # 采集工具 (universal, merged, network_intercept)
-│   │       └── examples/       # 示例脚本
+│   │   ├── browser/            # BrowserManager, CDP detector
+│   │   ├── puppeteer/          # 采集工具
+│   │   │   ├── universal_scraper/   # 通用网页爬虫
+│   │   │   ├── merged_scraper/      # 列表+详情合并抓取
+│   │   │   ├── network_intercept/   # API 网络拦截
+│   │   │   ├── browser_steps/       # 步骤执行器
+│   │   │   └── recruit_capture.py   # 招聘页面采集 (慢速滚动+截图)
+│   │   ├── examples/           # 示例脚本
+│   │   └── scripts/            # CLI 入口
 │   ├── app_airtest/            # App 自动化 (独立 venv，numpy<2)
 │   ├── app_uiautomator2/       # App UI 自动化 (workspace member)
-│   │   └── app_uiautomator2/   # 可导入的 Python 包
-│   │       ├── lib/            # 爬虫框架
-│   │       └── examples/       # 示例脚本
+│   │   ├── lib/                # 爬虫框架 (ListPageSpider, DetailPageSpider)
+│   │   └── examples/           # 示例脚本
 │   └── wx/                     # 微信公众号采集 (workspace member)
-│       └── wx/                 # 可导入的 Python 包
-├── visualization/              # 数据可视化
+│       ├── get_articles.py     # 公众号文章采集
+│       └── recruit_analyzer/   # 招聘文章分析 (采集→OCR→视觉→Markdown→投递判断)
+├── visualization/              # 数据可视化 (Visualizer 类)
 └── local_data/                 # 本地 JSON 存储 (不提交 Git)
+    ├── raw/                    # 采集原始数据
+    ├── analyzed/               # LLM 分析结果 (JSON + Markdown)
+    └── screenshots/            # 页面截图
 ```
 
 ## 常用命令
@@ -76,6 +85,10 @@ uv run --package app-script python -m app_uiautomator2.examples.boss_universal_e
 # wx — 微信公众号采集
 uv run --package data-collection-platform python -m wx.get_articles
 
+# wx — 招聘文章完整分析
+uv run --package data-collection-platform python -m wx.recruit_analyzer.analyze \
+    --url "https://mp.weixin.qq.com/s?__biz=..."
+
 # app_airtest 测试（使用独立 venv）
 collection_platform/app_airtest/.venv/bin/python collection_platform/app_airtest/tests/test_connection.py
 ```
@@ -90,15 +103,16 @@ cd frontend && npm run build
 
 ### 包结构与导入规则
 
-所有 workspace member 遵循 **目录名 = 包名**：
+所有 workspace member 遵循 **目录名 = 包名**，通过 `pyproject.toml` 的 `[tool.setuptools]` + `package-dir` 映射：
 
 | workspace member | 可导入包名 | 导入示例 |
 |---|---|---|
 | `browser_playwright/` | `browser_playwright` | `from browser_playwright.browser import BrowserManager` |
 | `app_uiautomator2/` | `app_uiautomator2` | `from app_uiautomator2.lib import ListPageSpider` |
-| `wx/` | `wx` | `from wx.get_articles import collect_api_data` |
-| `ai_agent/` | `ai_agent` | `from ai_agent.llm_client import analyze_articles` |
+| `wx/` | `wx` | `from wx.recruit_analyzer.analyze import analyze_url` |
+| `ai_agent/` | `ai_agent` | `from ai_agent.agent_config import create_llm` |
 | `common/` | `common` | `from common import file_manager` |
+| `visualization/` | `visualization` | `from visualization.visualizer import Visualizer` |
 
 Workspace 成员之间的依赖使用 `[tool.uv.sources]` 声明 `{ workspace = true }`，具体版本由 `uv.lock` 锁定。**禁止使用 `sys.path.insert`**。
 
