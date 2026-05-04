@@ -9,9 +9,11 @@
 import asyncio
 import json
 import re
+from pathlib import Path
 
 from browser_playwright.browser import BrowserManager
 from browser_playwright.puppeteer.network_intercept import ApiCollectorConfig, ApiCollector
+from common.file_manager import RAW_DIR
 
 
 def format_articles(all_data: list[dict]) -> list[dict]:
@@ -42,7 +44,7 @@ async def collect_api_data():
     """示例：连接已有页面，采集分页 API 数据。"""
 
     target_url = "https://mp.weixin.qq.com/"
-    save_name = "api_collected_data.json"
+    save_name = str(RAW_DIR / "api_collected_data.json")
     config = ApiCollectorConfig(
         # 匹配目标 API 的 URL（正则）
         url_pattern=r".*/cgi-bin/appmsgpublish.*",
