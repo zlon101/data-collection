@@ -3,10 +3,13 @@ Puppeteer/Playwright 工具模块
 提供浏览器自动化功能给 LangChain Agent
 """
 
+from pathlib import Path
 from typing import List
 from langchain_core.tools import BaseTool, StructuredTool
 from langchain_community.agent_toolkits import PlayWrightBrowserToolkit
 from playwright.async_api import Browser
+
+from common.file_manager import write_json_path
 
 
 def get_browser_tools(browser: Browser) -> List[BaseTool]:
@@ -114,10 +117,9 @@ def get_browser_tools(browser: Browser) -> List[BaseTool]:
                 },
                 "data": data
             }
-            
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(output, f, ensure_ascii=False, indent=2)
-            
+
+            write_json_path(output, Path(filename))
+
             return f"✅ Successfully scraped {len(data)} trending repositories. Saved to {filename}"
             
         except Exception as e:

@@ -5,10 +5,12 @@ API 响应采集器
 将分页表格的 API 响应数据收集到同一个数组中。
 """
 
-import json
 import re
+from pathlib import Path
 from typing import Optional
 from playwright.async_api import Page, Response
+
+from common.file_manager import write_json_path
 
 from .config import ApiCollectorConfig
 
@@ -89,8 +91,7 @@ class ApiCollector:
         if self._config.data_format:
             data = self._config.data_format(data)
 
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        write_json_path(data, Path(filepath))
         print(f"💾 已保存 {len(data)} 条数据到 {filepath}")
 
     # ── 内部方法 ────────────────────────────────────────────

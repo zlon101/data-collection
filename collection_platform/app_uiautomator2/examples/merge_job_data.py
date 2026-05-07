@@ -1,9 +1,10 @@
-import json
 import os
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
+
+from common.file_manager import write_json_path, read_json_path, list_json_files
 
 from common.path_utils import get_project_root
 from app_uiautomator2.examples.config import SpeicalRe, parse_money
@@ -58,9 +59,7 @@ def merge_and_deduplicate_data():
         data_json_dir.mkdir(parents=True, exist_ok=True)
 
         # 保存到新文件
-        # ensure_ascii=False 保证中文字符能够正常写入，indent=2 进行美化输出
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(deduplicated_data, f, ensure_ascii=False, indent=2)
+        write_json_path(deduplicated_data, output_path)
 
         print(f"合并后的数据已保存到: {output_path}")
         del_files()
@@ -90,8 +89,9 @@ def merge_all_json() -> list[dict[str, Any]]:
     # 读取每个json文件并合并
     for file_name in json_files:
         file_path = data_json_dir / file_name
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = read_json_path(file_path)
+        if data is None:
+            continue
 
         if isinstance(data, list):
             print(f"读取文件: {file_name}, 数据条数: {len(data)}")

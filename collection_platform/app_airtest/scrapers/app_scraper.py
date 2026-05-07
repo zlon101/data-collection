@@ -12,7 +12,6 @@
 """
 
 import argparse
-import json
 import logging
 import sys
 from dataclasses import asdict, dataclass, field
@@ -39,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 # ── 输出目录 ─────────────────────────────────────────────
 from ._path_utils import get_project_root
+from common.file_manager import write_json_path
 OUTPUT_DIR = get_project_root() / "collection_platform" / "app_airtest" / "outputs"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -216,8 +216,7 @@ def save_results(
     """将抓取结果序列化为 JSON 文件。"""
     output_path = OUTPUT_DIR / filename
     serializable = [asdict(r) for r in results]
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(serializable, f, ensure_ascii=False, indent=2)
+    write_json_path(serializable, output_path)
     logger.info("数据已保存至: %s", output_path)
     return output_path
 

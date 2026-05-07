@@ -12,7 +12,10 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any
+
+from common.file_manager import write_json_path
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
@@ -332,6 +335,6 @@ class ListPageSpider:
         if self.config.format_data:
             self.config.format_data(self.data_list)
 
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(self.data_list, f, ensure_ascii=False, indent=2)
-        console.print(f"[green]已保存到 {filename}[/green]")
+        path = Path(filename)
+        write_json_path(self.data_list, path)
+        console.print(f"[green]已保存到 {path}[/green]")

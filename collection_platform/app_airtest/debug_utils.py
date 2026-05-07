@@ -1,8 +1,9 @@
 # debug_utils.py
-import json
 import logging
 from pathlib import Path
 from poco.drivers.android.uiautomation import AndroidUiautomationPoco
+
+from common.file_manager import write_json_path
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +26,7 @@ def dump_ui_tree(
     hierarchy: dict = poco.agent.hierarchy.dump()
 
     out = Path(output_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with out.open("w", encoding="utf-8") as f:
-        json.dump(hierarchy, f, ensure_ascii=False, indent=2)
+    write_json_path(hierarchy, out)
 
     logger.info("UI 树已导出: %s", out.resolve())
     return hierarchy

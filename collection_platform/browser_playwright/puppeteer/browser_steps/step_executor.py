@@ -5,10 +5,13 @@
 
 import asyncio
 import json
+from pathlib import Path
 from typing import List, Dict, Optional, Any, Literal
 from dataclasses import dataclass, asdict
 from playwright.async_api import Page
 from enum import Enum
+
+from common.file_manager import write_json_path
 
 
 class StepType(str, Enum):
@@ -279,9 +282,8 @@ class BrowserStepExecutor:
         
         # 保存数据
         output_file = step.output_file or "output.json"
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        
+        write_json_path(data, Path(output_file))
+
         print(f"   ✓ 保存到: {output_file}")
         
         return {"success": True, "data": data, "output_file": output_file}
@@ -292,8 +294,7 @@ class BrowserStepExecutor:
     
     def save_log(self, filename: str = "execution_log.json"):
         """保存执行日志"""
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(self.execution_log, f, ensure_ascii=False, indent=2)
+        write_json_path(self.execution_log, Path(filename))
         print(f"💾 执行日志已保存到: {filename}")
 
 

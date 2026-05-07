@@ -5,6 +5,7 @@
 
 import asyncio
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 from browser_playwright.browser import BrowserManager
@@ -246,14 +247,13 @@ async def example_direct_usage():
         data = await scraper.scrape()
         
         # 保存为用户期望的格式
-        import json
-        
+        from common.file_manager import write_json_path
+
         # 简化格式（只保留数据数组）
         simple_output = data
-        
-        with open("output.json", 'w', encoding='utf-8') as f:
-            json.dump(simple_output, f, ensure_ascii=False, indent=2)
-        
+
+        write_json_path(simple_output, Path("output.json"))
+
         print(f"\n✅ 输出已保存到 output.json")
         print(f"   总条目: {len(data)}")
         

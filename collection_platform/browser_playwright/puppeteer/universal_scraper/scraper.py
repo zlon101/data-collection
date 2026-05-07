@@ -3,11 +3,13 @@
 支持自定义字段、分页抓取、灵活配置
 """
 
-import json
 import asyncio
+from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from playwright.async_api import Page
+
+from common.file_manager import write_json_path
 
 
 @dataclass
@@ -264,13 +266,13 @@ class UniversalScraper:
             "data": self.all_data
         }
         
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(output, f, ensure_ascii=False, indent=2)
-        
-        print(f"\n💾 数据已保存到: {filename}")
+        path = Path(filename)
+        write_json_path(output, path)
+
+        print(f"\n💾 数据已保存到: {path}")
         print(f"   总条目: {len(self.all_data)}")
-        
-        return filename
+
+        return str(path)
     
     def get_data(self) -> List[Dict[str, Any]]:
         """获取抓取的数据"""

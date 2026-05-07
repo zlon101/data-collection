@@ -3,11 +3,13 @@
 Merged Scraper Core Implementation
 """
 
-import json
 import asyncio
+from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from playwright.async_api import Page, TimeoutError as PlaywrightTimeout
+
+from common.file_manager import write_json_path
 
 from ..universal_scraper import UniversalScraper, FieldConfig
 from .config import MergedScraperConfig, NavigationMode
@@ -465,9 +467,8 @@ class MergedScraper:
             },
             "data": self.merged_data
         }
-        
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(output, f, ensure_ascii=False, indent=2)
+
+        write_json_path(output, Path(filename))
     
     def save_to_json(self, filename: str = "merged_data.json") -> str:
         """

@@ -137,6 +137,13 @@ Workspace 成员之间的依赖使用 `[tool.uv.sources]` 声明 `{ workspace = 
 
 采用 "文件即数据库" 设计，`common/file_manager.py` 是唯一的 I/O 入口。新增数据类型时应通过该模块操作，保持数据协议一致。
 
+**所有文件操作必须通过 `common/file_manager.py`，禁止直接使用 `open()` / `Path.read_text()` / `Path.write_text()`：**
+- JSON 读写：`write_json(data, filename, data_type)`（raw/analyzed 目录）或 `write_json_path(data, path)`（任意路径）；对应 `read_json` / `read_json_path`
+- 文本读写：`write_text(content, path)` / `read_text(path)`
+- 二进制读写：`write_bytes(data, path)` / `read_bytes(path)`
+- 目录列举：`list_files(source, data_type)`（raw/analyzed）或 `list_json_files(directory)`（任意目录）
+- 所有写入自动创建父目录（`mkdir -p`），读取时文件不存在返回 `None` 而非抛出异常
+
 ### 环境配置
 
 所有配置在 `.env` 文件中，包括 LLM API 密钥、浏览器连接模式等。

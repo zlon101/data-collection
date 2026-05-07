@@ -2,6 +2,9 @@ import mammoth
 from markdownify import markdownify as md
 import os
 import sys
+from pathlib import Path
+
+from common.file_manager import read_bytes, write_text
 
 # docx to md: https://github.com/microsoft/markitdown
 
@@ -9,7 +12,7 @@ def convert_docx_to_markdown(docx_path, output_path=None):
     """
     将 docx 文件转换为 markdown，并处理标题风格
     """
-    
+
     # 1. 检查文件是否存在
     if not os.path.exists(docx_path):
         print(f"❌ 错误: 找不到文件 '{docx_path}'")
@@ -25,10 +28,10 @@ def convert_docx_to_markdown(docx_path, output_path=None):
 
         # 3. 使用 mammoth 将 docx 转换为 HTML
         # mammoth 会尽量保留语义（如将 Word 的标题样式转为 <h1> 等）
-        with open(docx_path, "rb") as docx_file:
-            result = mammoth.convert_to_html(docx_file)
-            html_content = result.value
-            messages = result.messages # 警告信息
+        docx_content = read_bytes(Path(docx_path))
+        result = mammoth.convert_to_html(docx_content)
+        html_content = result.value
+        messages = result.messages # 警告信息
 
         # 4. 使用 markdownify 将 HTML 转换为 Markdown
         # heading_style="ATX" 强制使用 # 符号作为标题，而不是下划线
@@ -36,9 +39,8 @@ def convert_docx_to_markdown(docx_path, output_path=None):
         markdown_content = md(html_content, heading_style="ATX")
 
         # 5. 写入 Markdown 文件
-        with open(output_path, "w", encoding="utf-8") as md_file:
-            md_file.write(markdown_content)
-        
+        write_text(markdown_content, Path(output_path))
+
         print(f"✅ 转换成功: {output_path}")
 
         # 如果有警告（例如图片转换问题），打印出来

@@ -1,12 +1,12 @@
 # common/file_manager.py
 """
-JSON 文件的读写、列举、归档等工具。
-所有路径均相对于 local_data/ 目录计算，路径可通过 LOCAL_DATA_DIR 环境变量配置。
+统一文件 I/O 入口。
+所有文件读写必须通过本模块，禁止直接使用 open() / Path.read_text() / Path.write_text()。
 """
 
-import os
 import json
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -28,6 +28,13 @@ ANALYZED_DIR = LOCAL_DATA / "analyzed"
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 ANALYZED_DIR.mkdir(parents=True, exist_ok=True)
 
+
+def _ensure_dir(path: Path) -> None:
+    """确保文件所在目录存在，不存在则创建。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+
+# ── JSON 读写 ──────────────────────────────────────────────
 
 def list_files(source: str = "", data_type: str = "raw") -> list[dict]:
     """
@@ -75,13 +82,82 @@ def read_json(filename: str, data_type: str = "raw") -> list | dict | None:
 
 
 def write_json(data: Any, filename: str, data_type: str = "raw") -> Path:
-    """将数据序列化并写入指定文件，返回完整路径。"""
+    """将数据序列化并写入指定文件，自动创建父目录。返回完整路径。"""
     base_dir = RAW_DIR if data_type == "raw" else ANALYZED_DIR
     path = base_dir / filename
+    _ensure_dir(path)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("数据已写入: %s", path)
     return path
 
+
+def write_json_path(data: Any, path: Path) -> Path:
+    """将数据写入任意路径的 JSON 文件，自动创建父目录。返回完整路径。"""
+    _ensure_dir(path)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info("数据已写入: %s", path)
+    return path
+
+
+def read_json_path(path: Path) -> list | dict | None:
+    """从任意路径读取 JSON，文件不存在或解析失败返回 None。"""
+    if not path.exists():
+        logger.warning("文件不存在: %s", path)
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        logger.error("JSON 解析失败 %s: %s", path, exc)
+        return None
+
+
+def list_json_files(directory: Path) -> list[Path]:
+    """列出目录下所有 .json 文件。"""
+    if not directory.exists():
+        logger.warning("目录不存在: %s", directory)
+        return []
+    return sorted(directory.glob("*.json"))
+
+
+# ── 文本读写 ──────────────────────────────────────────────
+
+
+def read_text(path: Path, encoding: str = "utf-8") -> str | None:
+    """读取文本文件，文件不存在返回 None。"""
+    if not path.exists():
+        logger.warning("文件不存在: %s", path)
+        return None
+    return path.read_text(encoding=encoding)
+
+
+def write_text(content: str, path: Path, encoding: str = "utf-8") -> Path:
+    """写入文本文件，自动创建父目录。返回完整路径。"""
+    _ensure_dir(path)
+    path.write_text(content, encoding=encoding)
+    logger.info("文本已写入: %s", path)
+    return path
+
+
+# ── 二进制读写 ─────────────────────────────────────────────
+
+
+def read_bytes(path: Path) -> bytes | None:
+    """读取二进制文件，文件不存在返回 None。"""
+    if not path.exists():
+        logger.warning("文件不存在: %s", path)
+        return None
+    return path.read_bytes()
+
+
+def write_bytes(data: bytes, path: Path) -> Path:
+    """写入二进制文件，自动创建父目录。返回完整路径。"""
+    _ensure_dir(path)
+    path.write_bytes(data)
+    logger.info("二进制数据已写入: %s", path)
+    return path
+
+
+# ── 工具方法 ──────────────────────────────────────────────
 
 def latest_file(source: str, data_type: str = "raw") -> str | None:
     """返回指定来源最新文件的文件名，不存在返回 None。"""
