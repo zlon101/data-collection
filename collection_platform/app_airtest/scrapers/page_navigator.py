@@ -20,7 +20,8 @@ from airtest.core.api import (
 
 logger = logging.getLogger(__name__)
 
-_SNAP_DIR = Path(__file__).parent.parent / "outputs" / "wechat_snaps"
+from ._path_utils import get_project_root
+_SNAP_DIR = get_project_root() / "collection_platform" / "app_airtest" / "outputs" / "wechat_snaps"
 _SNAP_DIR.mkdir(parents=True, exist_ok=True)
 
 

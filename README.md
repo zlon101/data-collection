@@ -114,10 +114,8 @@ uv sync --all-packages
 由于 `airtest`/`pocoui` 依赖 `numpy<2.0`，与 workspace 的 `numpy>=2` 冲突，使用独立 venv：
 
 ```bash
-cd collection_platform/app_airtest
-uv venv .venv
-source .venv/bin/activate
-uv pip install "airtest>=1.3.6" "pocoui>=1.0.94" "numpy<2"
+uv run --directory collection_platform/app_airtest uv venv .venv
+uv run --directory collection_platform/app_airtest uv pip install "airtest>=1.3.6" "pocoui>=1.0.94" "numpy<2"
 ```
 
 ### 3. 配置文件
@@ -176,10 +174,19 @@ uv run --package data-collection-platform python -m wx.recruit_analyzer.analyze 
     --url "https://mp.weixin.qq.com/s?__biz=..."
 ```
 
-### app_airtest — 独立环境测试
+### app_airtest — 移动端采集
 
 ```bash
-collection_platform/app_airtest/.venv/bin/python collection_platform/app_airtest/tests/test_connection.py
+# 设备连接冒烟测试
+uv run --directory collection_platform/app_airtest python3 tests/test_connection.py
+
+# 微信公众号文章采集
+uv run --directory collection_platform/app_airtest python3 -m scrapers.wechat_scraper --account 国资小新 --max 20
+
+# 主入口（自动/手动模式 / UI dump）
+uv run --directory collection_platform/app_airtest python3 -m main
+uv run --directory collection_platform/app_airtest python3 -m main --mode manual
+uv run --directory collection_platform/app_airtest python3 -m main --dump
 ```
 
 ---

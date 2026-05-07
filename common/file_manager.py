@@ -1,20 +1,27 @@
 # common/file_manager.py
 """
 JSON 文件的读写、列举、归档等工具。
-所有路径均相对于项目根目录的 local_data/ 计算。
+所有路径均相对于 local_data/ 目录计算，路径可通过 LOCAL_DATA_DIR 环境变量配置。
 """
 
+import os
 import json
 import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from common.path_utils import get_project_root
+
 logger = logging.getLogger(__name__)
 
-# local_data 根目录（此文件在 common/，上二级为项目根）
-_PROJECT_ROOT = Path(__file__).parent.parent.resolve()
-LOCAL_DATA = _PROJECT_ROOT / "local_data"
+# local_data 根目录（可通过 LOCAL_DATA_DIR 环境变量配置，默认: 项目根目录下的 local_data/）
+_PROJECT_ROOT = get_project_root()
+_local_data_env = os.getenv("LOCAL_DATA_DIR")
+if _local_data_env:
+    LOCAL_DATA = Path(_local_data_env) if Path(_local_data_env).is_absolute() else _PROJECT_ROOT / _local_data_env
+else:
+    LOCAL_DATA = _PROJECT_ROOT / "local_data"
 RAW_DIR = LOCAL_DATA / "raw"
 ANALYZED_DIR = LOCAL_DATA / "analyzed"
 

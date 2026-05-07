@@ -20,10 +20,11 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
+from common.path_utils import get_project_root
 from .llm_operations import extract_from_vision, analyze_recruit_llm
 from .merge_parser import build_markdown
 
-load_dotenv(Path(__file__).parent.parent.parent.parent / ".env")
+load_dotenv(get_project_root() / ".env")
 
 logger = logging.getLogger(__name__)
 

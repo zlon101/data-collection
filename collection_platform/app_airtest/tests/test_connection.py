@@ -2,8 +2,8 @@
 """
 设备连接与 Poco 初始化的冒烟测试。
 
-运行方式（在项目根目录执行）：
-    uv run python tests/test_connection.py
+运行方式（从项目根目录执行）：
+    uv run --directory collection_platform/app_airtest python3 tests/test_connection.py
 
 测试通过的判断标准：
   1. ADB 能找到并连接设备（USB 已插入且已开启 USB 调试）。
@@ -16,9 +16,11 @@ import logging
 import sys
 from pathlib import Path
 
-# 将项目根目录加入 sys.path，确保在任意位置运行均可找到模块
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+from scrapers._path_utils import get_project_root
+
+APP_AIRTEST_ROOT = get_project_root() / "collection_platform" / "app_airtest"
+OUTPUT_DIR = APP_AIRTEST_ROOT / "outputs"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 from config.devices import (
     ADB_PATH,
@@ -33,9 +35,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 logger = logging.getLogger("test_connection")
-
-OUTPUT_DIR = PROJECT_ROOT / "outputs"
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def test_device_connection() -> bool:

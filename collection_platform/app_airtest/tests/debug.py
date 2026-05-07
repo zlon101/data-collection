@@ -1,19 +1,19 @@
-# test/debug.py
+# tests/debug.py
 """
 调试示例脚本：演示如何使用 debug_utils 在纯代码环境中探查 UI 结构。
 
 前提：已通过 USB 连接设备并完成 ADB 授权。
 
-运行方式（在项目根目录执行）：
-    uv run test/debug.py
+运行方式（从项目根目录执行）：
+    uv run --directory collection_platform/app_airtest python3 tests/debug.py
 """
 
 import sys
 from pathlib import Path
 
-# 将项目根目录加入模块搜索路径
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+from scrapers._path_utils import get_project_root
+
+APP_AIRTEST_ROOT = get_project_root() / "collection_platform" / "app_airtest"
 
 from config.devices import ADB_PATH, USB_DEVICE_SERIAL, POCO_DEFAULT_TIMEOUT
 from core import setup_android_device, create_android_poco

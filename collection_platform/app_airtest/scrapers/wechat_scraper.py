@@ -2,9 +2,8 @@
 """
 微信公众号列表 + 详情页数据采集主流程。
 
-运行方式：
-    cd collection_platform/app_airtest
-    uv run python -m scrapers.wechat_scraper --account 国资小新 --max 20
+运行方式（从项目根目录执行）：
+    uv run --directory collection_platform/app_airtest python3 -m scrapers.wechat_scraper --account 国资小新 --max 20
 
 流程：
   1. 手动在手机上打开微信「常看」列表页，按 Enter 触发
@@ -15,13 +14,10 @@
 
 import argparse
 import logging
-import sys
 from datetime import datetime
 from pathlib import Path
 
-PROJECT_ROOT_AIRTEST = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT_AIRTEST))
-
+from scrapers._path_utils import get_project_root
 from config.devices import ADB_PATH
 from scrapers.ocr_engine import recognize
 from scrapers.page_navigator import (

@@ -2,23 +2,25 @@
 """
 项目主入口。
 
-用法：
-  uv run python main.py                      # 自动启动 App 并抓取（默认）
-  uv run python main.py --mode manual        # 手动打开 App，按 Enter 后抓取
-  uv run python main.py --test               # 设备连接冒烟测试
-  uv run python main.py --dump               # dump 当前屏幕 UI 树（调试用）
+用法（从项目根目录执行）：
+  uv run --directory collection_platform/app_airtest python3 -m main                   # 自动启动 App 并抓取（默认）
+  uv run --directory collection_platform/app_airtest python3 -m main --mode manual    # 手动打开 App，按 Enter 后抓取
+  uv run --directory collection_platform/app_airtest python3 -m main --test           # 设备连接冒烟测试
+  uv run --directory collection_platform/app_airtest python3 -m main --dump           # dump 当前屏幕 UI 树（调试用）
 
 所有业务配置统一从 config/devices.py 读取。
 """
 
 import argparse
 import logging
+import subprocess
 import sys
 from pathlib import Path
 from typing import Literal
 
-PROJECT_ROOT = Path(__file__).parent
-sys.path.insert(0, str(PROJECT_ROOT))
+from scrapers._path_utils import get_project_root
+
+APP_AIRTEST_ROOT = get_project_root() / "collection_platform" / "app_airtest"
 
 from config.devices import (
     ADB_PATH,
@@ -44,9 +46,9 @@ def run_scraper(launch_mode: Literal["auto", "manual"]) -> None:
 
 def run_connection_test() -> None:
     """设备连接冒烟测试。"""
-    import subprocess
     result = subprocess.run(
-        [sys.executable, str(PROJECT_ROOT / "tests" / "test_connection.py")],
+        [sys.executable, "-c", f"import sys; sys.path.insert(0, '{APP_AIRTEST_ROOT}'); exec(open('{APP_AIRTEST_ROOT}/tests/test_connection.py').read())"],
+        cwd=APP_AIRTEST_ROOT,
         check=False,
     )
     sys.exit(result.returncode)
@@ -63,7 +65,7 @@ def run_dump() -> None:
     )
     poco = create_android_poco(timeout=POCO_DEFAULT_TIMEOUT)
 
-    output_path = str(PROJECT_ROOT / "outputs" / "ui_tree_dump.json")
+    output_path = str(APP_AIRTEST_ROOT / "outputs" / "ui_tree_dump.json")
     tree = dump_ui_tree(poco, output_path)
     texts = find_all_texts(tree)
 

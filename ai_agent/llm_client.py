@@ -14,7 +14,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
-load_dotenv(Path(__file__).parent.parent / ".env")
+from common.path_utils import get_project_root
+
+load_dotenv(get_project_root() / ".env")
 logger = logging.getLogger(__name__)
 
 _PROMPT = ChatPromptTemplate.from_messages([

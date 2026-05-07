@@ -89,8 +89,10 @@ uv run --package data-collection-platform python -m wx.get_articles
 uv run --package data-collection-platform python -m wx.recruit_analyzer.analyze \
     --url "https://mp.weixin.qq.com/s?__biz=..."
 
-# app_airtest 测试（使用独立 venv）
-collection_platform/app_airtest/.venv/bin/python collection_platform/app_airtest/tests/test_connection.py
+# app_airtest 测试（独立 venv，所有命令从项目根执行）
+uv run --directory collection_platform/app_airtest python3 tests/test_connection.py
+uv run --directory collection_platform/app_airtest python3 -m main
+uv run --directory collection_platform/app_airtest python3 -m scrapers.wechat_scraper --account 国资小新 --max 20
 ```
 
 ### 前端构建
@@ -98,6 +100,10 @@ collection_platform/app_airtest/.venv/bin/python collection_platform/app_airtest
 ```bash
 cd frontend && npm run build
 ```
+
+## 运行约定
+
+**所有命令必须从项目根目录执行**。Workspace 成员通过 `uv run --package` 执行，app_airtest 通过 `uv run --directory` 执行。禁止先 `cd` 到子目录再执行（npm 项目除外）。
 
 ## 架构要点
 

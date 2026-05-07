@@ -52,20 +52,12 @@ adb version
 ### 2.2 使用 uv 创建项目并安装依赖
 
 ```bash
-# 进入工作区
-cd /Users/admin/work
-
-# 初始化项目（指定 Python 版本）
-uv init airtest-automation --python 3.11.8
-cd airtest-automation
-
-# 安装核心依赖
-# airtest: 图像识别 + 设备连接框架
-# pocoui: UI 控件树解析框架
-uv add "airtest>=1.3.0" "pocoui>=1.0.86"
+# 从项目根目录执行
+uv run --directory collection_platform/app_airtest uv venv .venv
+uv run --directory collection_platform/app_airtest uv pip install "airtest>=1.3.0" "pocoui>=1.0.86"
 
 # 确认安装成功
-uv run python -c "import airtest; import poco; print('OK')"
+uv run --directory collection_platform/app_airtest python3 -c "import airtest; import poco; print('OK')"
 ```
 
 
@@ -163,13 +155,13 @@ snapshot(filename="outputs/step_02_after_click.jpg")
 ### 6.5 运行脚本
 
 ```bash
-# 在项目根目录下，通过 uv 运行脚本（自动使用虚拟环境）
-cd /Users/admin/work/airtest-automation
-uv run python scrapers/app_scraper.py
+# 从项目根目录执行（所有命令统一入口）
+uv run --directory collection_platform/app_airtest python3 -m main
+uv run --directory collection_platform/app_airtest python3 -m main --mode manual
+uv run --directory collection_platform/app_airtest python3 tests/test_connection.py
 
-# 或直接激活环境后运行
-source .venv/bin/activate
-python scrapers/app_scraper.py
+# 微信公众号采集
+uv run --directory collection_platform/app_airtest python3 -m scrapers.wechat_scraper --account 国资小新 --max 20
 ```
 
 ---

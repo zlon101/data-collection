@@ -58,17 +58,26 @@ uiauto.dev
 
 ### 3. 运行示例
 
+在项目根目录下执行：
+
 ```bash
-# 通用页面解析
-cd examples
-python generic_page_example.py
+# Boss直聘通用示例（列表+详情）
+uv run --package app-script python -m app_uiautomator2.examples.boss_universal_example
 
-# 列表页抓取
-python boss_list_example.py
+# 智联招聘示例
+uv run --package app-script python -m app_uiautomator2.examples.zhilian_example
 
-# 列表页 + 详情页
-python boss_detail_example.py
+# 调试脚本
+uv run --package app-script python -m app_uiautomator2.examples.debug
+
+# 合并职位数据
+uv run --package app-script python -m app_uiautomator2.examples.merge_job_data
+
+# 查看配置
+uv run --package app-script python -m app_uiautomator2.examples.config
 ```
+
+> **注意：** 运行示例前需确保 Android 设备已通过 adb 连接并开启 USB 调试。
 
 ## 💡 核心模块
 

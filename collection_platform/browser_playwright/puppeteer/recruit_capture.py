@@ -14,13 +14,19 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
+from common.path_utils import get_project_root
 from browser_playwright.browser import BrowserManager
 
 logger = logging.getLogger(__name__)
 
-# 截图和 raw 数据存储目录
-_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent.resolve()
-SCREENSHOT_DIR = _PROJECT_ROOT / "local_data" / "screenshots"
+# 截图和 raw 数据存储目录（可通过 LOCAL_DATA_DIR 环境变量配置，默认: 项目根目录下的 local_data/）
+_PROJECT_ROOT = get_project_root()
+_local_data_env = os.getenv("LOCAL_DATA_DIR")
+if _local_data_env:
+    _local_data = Path(_local_data_env) if Path(_local_data_env).is_absolute() else _PROJECT_ROOT / _local_data_env
+else:
+    _local_data = _PROJECT_ROOT / "local_data"
+SCREENSHOT_DIR = _local_data / "screenshots"
 SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 

@@ -5,6 +5,7 @@
 uv run --package app-script app_uiautomator2.examples.zhilian_example
 """
 
+import os
 import re
 import time
 from datetime import datetime
@@ -30,9 +31,12 @@ console = Console()
 now = datetime.now()
 seen_unique_keys: set[str] = get_seen_unique_keys()
 
-is_search = True  # 搜索后的列表
-output_file = f"./local_data/job/智联_{now.strftime('%m%d_%H%M')}.json"
+# 输出路径（可通过 LOCAL_DATA_DIR 环境变量配置）
+_local_data_dir = Path(os.getenv("LOCAL_DATA_DIR", "./local_data")) / "job"
+_local_data_dir.mkdir(parents=True, exist_ok=True)
+output_file = str(_local_data_dir / f"智联_{now.strftime('%m%d_%H%M')}.json")
 max_items = 20
+is_search = False  # 搜索后的列表
 
 def main():
     console.print(

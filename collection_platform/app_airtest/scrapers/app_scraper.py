@@ -38,7 +38,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── 输出目录 ─────────────────────────────────────────────
-OUTPUT_DIR = Path(__file__).parent.parent / "outputs"
+from ._path_utils import get_project_root
+OUTPUT_DIR = get_project_root() / "collection_platform" / "app_airtest" / "outputs"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 

@@ -5,14 +5,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+from common.path_utils import get_project_root
 from app_uiautomator2.examples.config import SpeicalRe, parse_money
 
 now = datetime.now()
 merged_file_name = f"merged_data_{now.strftime('%m%d')}.json"
-# 获取当前脚本所在目录 (__dirname)
-current_dir = Path(__file__).resolve().parent
-# 构造目标和输出路径
-data_json_dir = current_dir.parent / "local_data" / "job"
+# 构造目标和输出路径（可通过 LOCAL_DATA_DIR 环境变量配置，默认: local_data）
+_project_root = get_project_root()
+_local_data_env = os.getenv("LOCAL_DATA_DIR")
+if _local_data_env:
+    _local_data = Path(_local_data_env) if Path(_local_data_env).is_absolute() else _project_root / _local_data_env
+else:
+    _local_data = _project_root / "local_data"
+data_json_dir = _local_data / "job"
 output_path = data_json_dir / merged_file_name
 
 
@@ -50,7 +55,7 @@ def merge_and_deduplicate_data():
         print(f"去重后数据条数: {len(deduplicated_data)}")
 
         # 确保输出目录存在
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        data_json_dir.mkdir(parents=True, exist_ok=True)
 
         # 保存到新文件
         # ensure_ascii=False 保证中文字符能够正常写入，indent=2 进行美化输出

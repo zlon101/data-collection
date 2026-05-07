@@ -1,15 +1,24 @@
 # scrapers/state_manager.py
 """状态文件管理：读取/写入/断点续传。"""
 
+import os
 import json
 import logging
 from datetime import datetime
 from pathlib import Path
 
+from ._path_utils import get_project_root
+
 logger = logging.getLogger(__name__)
 
-_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent  # data-collection/
-LOCAL_DATA_RAW = _PROJECT_ROOT / "local_data" / "raw"
+# local_data/raw 目录（可通过 LOCAL_DATA_DIR 环境变量配置，默认: 项目根目录下的 local_data/raw）
+_PROJECT_ROOT = get_project_root()
+_local_data_env = os.getenv("LOCAL_DATA_DIR")
+if _local_data_env:
+    _local_data = Path(_local_data_env) if Path(_local_data_env).is_absolute() else _PROJECT_ROOT / _local_data_env
+else:
+    _local_data = _PROJECT_ROOT / "local_data"
+LOCAL_DATA_RAW = _local_data / "raw"
 LOCAL_DATA_RAW.mkdir(parents=True, exist_ok=True)
 
 
