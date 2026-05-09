@@ -3,7 +3,7 @@
 """
 Boss 直聘爬虫 - 使用通用页面解析器
 演示如何使用 UniversalPageParser 和 DetailPageSpiderUniversal
-uv run --package app-script app_uiautomator2.examples.boss_universal_example
+uv run --package app-script python -m app_uiautomator2.examples.boss_universal_example
 """
 
 import os
@@ -33,13 +33,17 @@ console = Console()
 now = datetime.now()
 seen_unique_keys: set[str] = get_seen_unique_keys()
 
+# 配置
+max_items = 20
+is_new_job_list = False
+is_search = True
+
+
 # 输出路径（可通过 LOCAL_DATA_DIR 环境变量配置）
 _local_data_dir = Path(os.getenv("LOCAL_DATA_DIR", "./local_data")) / "job"
 _local_data_dir.mkdir(parents=True, exist_ok=True)
 output_file = str(_local_data_dir / f"boss_{now.strftime('%m%d_%H%M')}.json")
-max_items = 3
-is_new_job_list = False
-is_search = False
+
 
 def main():
     console.print(

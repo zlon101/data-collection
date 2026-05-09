@@ -35,8 +35,8 @@ seen_unique_keys: set[str] = get_seen_unique_keys()
 _local_data_dir = Path(os.getenv("LOCAL_DATA_DIR", "./local_data")) / "job"
 _local_data_dir.mkdir(parents=True, exist_ok=True)
 output_file = str(_local_data_dir / f"智联_{now.strftime('%m%d_%H%M')}.json")
-max_items = 2
-is_search = False  # 搜索后的列表
+max_items = 20
+is_search = True  # 搜索后的列表
 
 def main():
     console.print(
