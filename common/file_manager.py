@@ -7,6 +7,7 @@
 import json
 import logging
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,10 @@ ANALYZED_DIR = LOCAL_DATA / "analyzed"
 
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 ANALYZED_DIR.mkdir(parents=True, exist_ok=True)
+
+# ── Job 目录 ──
+JOB_DIR = LOCAL_DATA / "job"
+JOB_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _ensure_dir(path: Path) -> None:
@@ -172,3 +177,66 @@ def analyzed_filename_for(raw_filename: str) -> str:
     """
     stem = Path(raw_filename).stem
     return f"{stem}_done.json"
+
+
+# ── Job 目录操作 ──────────────────────────────────────────
+
+def list_job_files() -> list[dict]:
+    """列举 job 目录下的所有 JSON 文件元信息。"""
+    files = []
+    for f in sorted(JOB_DIR.glob("*.json"), reverse=True):
+        stat = f.stat()
+        files.append({
+            "filename": f.name,
+            "size_kb": round(stat.st_size / 1024, 1),
+            "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        })
+    return files
+
+
+def read_job_data() -> list[dict]:
+    """读取 job 目录下所有 JSON 文件，按 unique_key 合并去重后返回。"""
+    all_data: list[dict] = []
+    for f in JOB_DIR.glob("*.json"):
+        data = read_json_path(f)
+        if data and isinstance(data, list):
+            all_data.extend(data)
+
+    seen: set[str] = set()
+    deduplicated: list[dict] = []
+    for item in all_data:
+        key = item.get("unique_key")
+        if key and key not in seen:
+            deduplicated.append(item)
+            seen.add(key)
+    return deduplicated
+
+
+def parse_salary(salary_str: str) -> tuple[float, float] | None:
+    """解析薪资字符串，如 '1.5-2.0万' → (15.0, 20.0)（千元/月）。
+
+    支持格式:
+      - '1.5-2.0万' → (15.0, 20.0)
+      - '15-20K' → (15.0, 20.0)
+      - '8-12k' → (8.0, 12.0)
+      - '8000-12000元' → (8.0, 12.0)
+    """
+    if not salary_str:
+        return None
+
+    numbers = re.findall(r"[\d.]+", salary_str)
+    if len(numbers) < 2:
+        return None
+
+    low = float(numbers[0])
+    high = float(numbers[1])
+
+    lower = salary_str.lower()
+    if "万" in salary_str:
+        return (low * 10, high * 10)
+    elif "k" in lower:
+        return (low, high)
+    elif "元" in lower:
+        return (low / 1000, high / 1000)
+
+    return (low, high)
