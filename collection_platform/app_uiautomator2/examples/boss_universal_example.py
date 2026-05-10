@@ -19,10 +19,6 @@ from rich.console import Console
 from rich.panel import Panel
 
 from app_uiautomator2.examples.config import (
-    BlackCompany,
-    JobKeys,
-    MAX_DISTANCE,
-    MoneyMin,
     SpeicalRe,
     parse_money,
 )
@@ -30,22 +26,43 @@ from app_uiautomator2.examples.merge_job_data import get_seen_unique_keys
 from app_uiautomator2.lib import DetailPageSpiderUniversal, ListPageSpider, ListPageSpiderParam
 
 console = Console()
-now = datetime.now()
-seen_unique_keys: set[str] = get_seen_unique_keys()
-
-# 配置
-max_items = 20
-is_new_job_list = False
-is_search = True
 
 
 # 输出路径（可通过 LOCAL_DATA_DIR 环境变量配置）
 _local_data_dir = Path(os.getenv("LOCAL_DATA_DIR", "./local_data")) / "job"
 _local_data_dir.mkdir(parents=True, exist_ok=True)
-output_file = str(_local_data_dir / f"boss_{now.strftime('%m%d_%H%M')}.json")
 
 
-def main():
+def main(
+    max_items: int = 20,
+    is_new_job_list: bool = False,
+    is_search: bool = True,
+    job_keys: list[str] | None = None,
+    black_company: list[str] | None = None,
+    money_min: float | None = None,
+    max_distance: float | None = None,
+    task_id: str | None = None,
+):
+    from app_uiautomator2.examples.config import (
+        BlackCompany,
+        JobKeys,
+        MAX_DISTANCE,
+        MoneyMin,
+    )
+
+    job_keys = job_keys or JobKeys
+    black_company = black_company or BlackCompany
+    money_min = money_min if money_min is not None else MoneyMin
+    max_dist = max_distance if max_distance is not None else MAX_DISTANCE
+
+    now = datetime.now()
+    output_file = str(_local_data_dir / f"boss_{now.strftime('%m%d_%H%M')}.json")
+    seen_unique_keys: set[str] = get_seen_unique_keys()
+
+    if task_id:
+        from common.logger import log
+        log(f"连接 Android 设备，采集器: Boss 直聘...", task_id=task_id)
+
     console.print(
         Panel.fit(
             "[bold cyan]Boss 直聘爬虫 - 通用解析器版本[/bold cyan]\n"
@@ -59,13 +76,13 @@ def main():
 
     # 配置详情页爬虫
     def custom_stop(item_value: Dict[str, str]) -> bool:
-        active = item_value["活跃度"]
+        active = item_value.get("活跃度", "")
         activeNotMatch = bool(active) and all(
             t2 not in active for t2 in ["分钟", "日", "周"]
         )
-        distanceStr = re.sub(r"[^\d.]", "", item_value["距离"] or "")
+        distanceStr = re.sub(r"[^\d.]", "", item_value.get("距离", "") or "")
         distance = float(distanceStr) if distanceStr.strip() else 0
-        distanceNotMatch = bool(distanceStr) and distance > MAX_DISTANCE
+        distanceNotMatch = bool(distanceStr) and distance > max_dist
         return activeNotMatch or distanceNotMatch
 
     def generate_unique_key_detail(detail_data: Dict[str, str]) -> str:
@@ -163,11 +180,11 @@ def main():
     # 过滤item, false 表示排除
     def item_filter(item_value: Dict[str, str]) -> bool:
         job = item_value["职位"]
-        job_ok = bool(job) and "GIS" not in job and any(t in job for t in JobKeys)
+        job_ok = bool(job) and "GIS" not in job and any(t in job for t in job_keys)
 
         company = item_value["公司"]
         company_ok = not company or all(
-            black_item not in company for black_item in BlackCompany
+            black_item not in company for black_item in black_company
         )
 
         money = parse_money(item_value["薪资"] or "")
@@ -175,7 +192,7 @@ def main():
             job_ok
             and company_ok
             and item_value.get("unique_item_key") not in seen_unique_keys
-            and money["max"] >= MoneyMin
+            and money["max"] >= money_min
         )
 
     def format_data(data_list: list[dict[str, Any]]):
@@ -200,6 +217,10 @@ def main():
         format_data=format_data,
     )
 
+    if task_id:
+        from common.logger import log
+        log(f"开始抓取，目标 {max_items} 条...", task_id=task_id)
+
     list_spider = ListPageSpider(config=list_config)
 
     # 5. 开始爬取
@@ -211,6 +232,12 @@ def main():
     elapsed = (end_time - start_time) / 60  # 分
     # 30 条耗时9分钟
     console.print(f"耗时: {elapsed:.2f} 分")
+
+    if task_id:
+        from common.logger import log
+        log(f"采集完成，已保存至 {output_file}", task_id=task_id)
+
+    return output_file
 
 
 if __name__ == "__main__":

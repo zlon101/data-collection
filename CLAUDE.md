@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**编写代码时必须遵守 `docs/开发规范.md` 中的规则**，特别是：
+- 文件读写操作必须通过 `common/file_manager.py` 中的方法
+- 日志输出必须使用 `common.logger.log()`
+
 ## 项目概述
 
 轻量级全栈数据采集与分析工作站，采用 **uv Workspace Monorepo** 架构，集成网页抓取、移动端自动化、LLM 结构化分析及 Vue3 可视化仪表盘。

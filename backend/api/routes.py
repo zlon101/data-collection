@@ -29,7 +29,9 @@ from common.file_manager import (
     read_job_data,
     read_json,
     write_json,
+    write_json_path,
 )
+from common.path_utils import get_project_root
 from common.logger import _subscribers, log, register_queue, unregister_queue
 
 logger = logging.getLogger(__name__)
@@ -243,6 +245,15 @@ async def collector_sse(task_id: str):
     )
 
 
+@router.post("/collector/config")
+async def save_collector_config(config_name: str, req: dict[str, Any]):
+    """保存爬虫配置到 backend/database/crawler/。"""
+    config_dir = get_project_root() / "backend" / "database" / "crawler"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    path = write_json_path(req, config_dir / f"config_{config_name}.json")
+    return {"path": str(path)}
+
+
 def _send_complete(task_id: str) -> None:
     """向 SSE 队列发送完成事件。"""
     payload = json.dumps({"status": "done", "task_id": task_id})
@@ -314,6 +325,7 @@ def _sync_run_app_scraper(task_id: str, params: dict) -> str:
     from collection_platform.app_uiautomator2.launcher import run_app_scraper
 
     return run_app_scraper(
+        app_type=params.get("app_type", "boss"),
         max_items=params.get("max_items", 20),
         is_search=params.get("is_search", True),
         is_new_job_list=params.get("is_new_job_list", False),

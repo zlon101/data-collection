@@ -2,7 +2,7 @@
   <a-modal
     v-model:open="visible"
     title="采集日志"
-    width="800px"
+width="80%"
     :footer="null"
     @cancel="handleClose"
   >
@@ -31,6 +31,10 @@ import { ref, watch, onUnmounted } from 'vue';
 import client from '../api/client';
 import { createEventSource } from '../api/sse';
 
+const props = defineProps({
+  taskId: { type: String, default: '' },
+});
+
 const visible = defineModel('visible', { type: Boolean, default: false });
 
 const tasks = ref([]);
@@ -39,7 +43,8 @@ const logs = ref([]);
 let es = null;
 
 const fetchTasks = async () => {
-  tasks.value = await client.get('/collector/tasks');
+  const res = await client.get('/collector/tasks');
+  tasks.value = res.data;
 };
 
 const handleClose = () => {
@@ -70,9 +75,13 @@ const onTaskChange = (id) => {
   });
 };
 
-watch(visible, (val) => {
+watch(visible, async (val) => {
   if (val) {
-    fetchTasks();
+    await fetchTasks();
+    if (props.taskId) {
+      selectedTaskId.value = props.taskId;
+      onTaskChange(props.taskId);
+    }
   } else {
     handleClose();
   }

@@ -17,10 +17,6 @@ from rich.console import Console
 from rich.panel import Panel
 
 from app_uiautomator2.examples.config import (
-    BlackCompany,
-    JobKeys,
-    MAX_DISTANCE,
-    MoneyMin,
     SpeicalRe,
     parse_money,
 )
@@ -28,20 +24,45 @@ from app_uiautomator2.examples.merge_job_data import get_seen_unique_keys
 from app_uiautomator2.lib import DetailPageSpiderUniversal, ListPageSpider, ListPageSpiderParam
 
 console = Console()
-now = datetime.now()
-seen_unique_keys: set[str] = get_seen_unique_keys()
+
 
 # 输出路径（可通过 LOCAL_DATA_DIR 环境变量配置）
 _local_data_dir = Path(os.getenv("LOCAL_DATA_DIR", "./local_data")) / "job"
 _local_data_dir.mkdir(parents=True, exist_ok=True)
-output_file = str(_local_data_dir / f"智联_{now.strftime('%m%d_%H%M')}.json")
-max_items = 20
-is_search = True  # 搜索后的列表
 
-def main():
+
+def main(
+    max_items: int = 20,
+    is_search: bool = False,
+    job_keys: list[str] | None = None,
+    black_company: list[str] | None = None,
+    money_min: float | None = None,
+    max_distance: float | None = None,
+    task_id: str | None = None,
+):
+    from app_uiautomator2.examples.config import (
+        BlackCompany,
+        JobKeys,
+        MAX_DISTANCE,
+        MoneyMin,
+    )
+
+    job_keys = job_keys or JobKeys
+    black_company = black_company or BlackCompany
+    money_min = money_min if money_min is not None else MoneyMin
+    max_dist = max_distance if max_distance is not None else MAX_DISTANCE
+
+    now = datetime.now()
+    seen_unique_keys: set[str] = get_seen_unique_keys()
+    output_file = str(_local_data_dir / f"智联_{now.strftime('%m%d_%H%M')}.json")
+
+    if task_id:
+        from common.logger import log
+        log(f"连接 Android 设备，采集器: 智联...", task_id=task_id)
+
     console.print(
         Panel.fit(
-            "[bold cyan]Boss 直聘爬虫 - 通用解析器版本[/bold cyan]\n"
+            "[bold cyan]智联招聘爬虫 - 通用解析器版本[/bold cyan]\n"
             "[dim]特性: 自动分屏 + 智能滚动 + 底部检测[/dim]",
             border_style="cyan",
         )
@@ -55,7 +76,7 @@ def main():
         unique_keys = ["职位", "公司", "薪资"]
         valArr: list[str] = []
         for k in unique_keys:
-            val = detail_data[k]
+            val = detail_data.get(k, "")
             if "职位" == k:
                 val = [s.strip() for s in val.split("-") if s.strip()][0]
                 val = SpeicalRe.sub("", val or "")
@@ -65,9 +86,9 @@ def main():
         return "/".join(valArr)
 
     def custom_stop(item: dict[str, str]) -> bool:
-        distanceStr = re.sub(r"[^\d.]", "", item["距离"] or "")
+        distanceStr = re.sub(r"[^\d.]", "", item.get("距离", "") or "")
         distance = float(distanceStr) if distanceStr.strip() else 0
-        distanceNotMatch = bool(distance) and distance > MAX_DISTANCE
+        distanceNotMatch = bool(distance) and distance > max_dist
         return distanceNotMatch
 
     detail_spider = DetailPageSpiderUniversal(
@@ -102,11 +123,6 @@ def main():
                 "resourceId": "com.zhaopin.social:id/tv_right_distance",
                 "optional": True,  # 可选，有些职位可能不显示距离
             },
-            # 猎头/派遣
-            # "客户公司": {
-            #     "resourceId": "com.hpbr.bosszhipin:id/tv_com_name",
-            #     "optional": True
-            # },
         },
     )
 
@@ -128,14 +144,14 @@ def main():
     # 过滤item, false 表示排除
     def item_filter(item_value: Dict[str, str]) -> bool:
         job = item_value["职位"]
-        job_ok = bool(job) and "GIS" not in job and any(t in job for t in JobKeys)
+        job_ok = bool(job) and "GIS" not in job and any(t in job for t in job_keys)
 
         company = item_value["公司"]
         company_ok = not company or all(
-            black_item not in company for black_item in BlackCompany
+            black_item not in company for black_item in black_company
         )
 
-        active = item_value["活跃度"]
+        active = item_value.get("活跃度", "")
         active_ok = bool(active) and any(t2 in active for t2 in ["分", "日", "周"])
 
         money = parse_money(item_value["薪资"] or "")
@@ -144,7 +160,7 @@ def main():
             and active_ok
             and company_ok
             and item_value.get("unique_item_key") not in seen_unique_keys
-            and money["max"] >= MoneyMin
+            and money["max"] >= money_min
         )
 
     def format_data(data_list: list[dict[str, Any]]):
@@ -173,6 +189,11 @@ def main():
         item_filter=item_filter,
         format_data=format_data,
     )
+
+    if task_id:
+        from common.logger import log
+        log(f"开始抓取，目标 {max_items} 条...", task_id=task_id)
+
     list_spider = ListPageSpider(config=list_config)
 
     # 5. 开始爬取
@@ -182,8 +203,13 @@ def main():
     # 时长计算
     end_time = time.perf_counter()
     elapsed = (end_time - start_time) / 60  # 分
-    # 30 条耗时9分钟
     console.print(f"耗时: {elapsed:.2f} 分")
+
+    if task_id:
+        from common.logger import log
+        log(f"采集完成，已保存至 {output_file}", task_id=task_id)
+
+    return output_file
 
 
 if __name__ == "__main__":
