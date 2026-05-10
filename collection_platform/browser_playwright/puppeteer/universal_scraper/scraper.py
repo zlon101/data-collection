@@ -290,7 +290,7 @@ def create_scraper_config(
 ) -> ScraperConfig:
     """
     创建抓取器配置（便捷函数）
-    
+
     Args:
         url: 目标网址
         fields: 字段配置字典 {"字段名": "CSS选择器"}
@@ -299,7 +299,7 @@ def create_scraper_config(
         page_range: 页码范围
         delay: 延迟时间
         max_pages: 最大页数
-        
+
     Returns:
         ScraperConfig对象
     """
@@ -307,7 +307,7 @@ def create_scraper_config(
         FieldConfig(name=name, selector=selector)
         for name, selector in fields.items()
     ]
-    
+
     return ScraperConfig(
         url=url,
         fields=field_configs,

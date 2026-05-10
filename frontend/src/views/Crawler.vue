@@ -13,12 +13,21 @@
           </a-tabs>
         </a-tab-pane>
         <a-tab-pane key="browser_playwright" tab="网页抓取">
-          <BrowserCrawlerForm ref="browserFormRef" />
+          <div class="browser-crawler-section">
+            <ConfigSelector
+              type="browser_playwright"
+              v-model:configName="browserConfigName"
+              :configs="browserConfigs"
+              @load="loadConfig"
+              @delete="deleteConfig"
+            />
+            <BrowserCrawlerForm ref="browserFormRef" />
+          </div>
         </a-tab-pane>
       </a-tabs>
       <div class="action-btns">
         <a-button @click="saveConfig" :disabled="running">保存</a-button>
-        <a-button @click="logModalVisible = true" class="log-btn">日志</a-button>
+        <a-button @click="logModalVisible = true" :disabled="!taskId" class="log-btn">日志</a-button>
       </div>
     </div>
 
@@ -38,12 +47,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import client from '../api/client';
 import BossForm from '../components/BossForm.vue';
 import ZhilianForm from '../components/ZhilianForm.vue';
 import BrowserCrawlerForm from '../components/BrowserCrawlerForm.vue';
+import ConfigSelector from '../components/ConfigSelector.vue';
 import LogModal from '../components/LogModal.vue';
 
 const crawlerType = ref('app_uiautomator2');
@@ -58,6 +68,46 @@ const statusColor = ref('');
 const statusLabel = ref('');
 
 const logModalVisible = ref(false);
+
+// 网页抓取配置管理
+const browserConfigName = ref('');
+const browserConfigs = ref([]);
+
+const loadBrowserConfigs = async () => {
+  try {
+    const res = await client.get('/collector/configs');
+    browserConfigs.value = res.configs || [];
+  } catch (e) {
+    // 静默失败
+  }
+};
+
+const loadConfig = async (name) => {
+  try {
+    const res = await client.get(`/collector/config/${name}`);
+    browserFormRef.value?.loadParams(res.params);
+    message.success(`已加载配置: ${name}`);
+  } catch (e) {
+    message.error('加载配置失败: ' + e.message);
+  }
+};
+
+const deleteConfig = async (name) => {
+  try {
+    await client.delete(`/collector/config/${name}`);
+    if (browserConfigName.value === name) {
+      browserConfigName.value = '';
+    }
+    await loadBrowserConfigs();
+    message.success(`配置已删除: ${name}`);
+  } catch (e) {
+    message.error('删除配置失败: ' + e.message);
+  }
+};
+
+onMounted(() => {
+  loadBrowserConfigs();
+});
 
 const getActiveFormRef = () => {
   if (crawlerType.value === 'app_uiautomator2') {
@@ -94,10 +144,23 @@ const startCrawl = async () => {
 const saveConfig = async () => {
   const formRef = getActiveFormRef();
   const params = formRef.value.getParams();
-  const configName = params.app_type || crawlerType.value;
+  let configName;
+  if (crawlerType.value === 'browser_playwright') {
+    configName = browserConfigName.value;
+    if (!configName) {
+      message.warning('请输入配置名');
+      return;
+    }
+  } else {
+    configName = params.app_type || crawlerType.value;
+  }
   try {
     await client.post(`/collector/config?config_name=${configName}`, params);
     message.success(`配置已保存: ${configName}`);
+    // 刷新配置列表
+    if (crawlerType.value === 'browser_playwright') {
+      await loadBrowserConfigs();
+    }
   } catch (e) {
     message.error('保存失败: ' + e.message);
   }
@@ -125,14 +188,20 @@ const saveConfig = async () => {
   margin-bottom: 16px;
 }
 
+.browser-crawler-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .action-btns {
   display: flex;
   gap: 8px;
   margin-left: 16px;
   flex-shrink: 0;
-  }
-  
-  .log-btn {
+}
+
+.log-btn {
   flex-shrink: 0;
 }
 

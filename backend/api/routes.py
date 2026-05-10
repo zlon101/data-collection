@@ -9,30 +9,31 @@ FastAPI 路由：提供给前端调用的 REST 接口。
   GET  /api/summary            返回最新 analyzed 文件的数据摘要
   GET  /api/jobs               获取招聘数据（支持筛选）
   POST /api/collector          触发爬虫采集任务
-  GET  /api/collector/sse/{task_id}   SSE 实时推送采集日志
+  GET  /api/collector/logs/{task_id}  读取采集任务日志
 """
 
 import asyncio
-import json
 import logging
 import uuid
+from datetime import datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from common.file_manager import (
     analyzed_filename_for,
     list_files,
+    list_json_files,
     parse_salary,
     read_job_data,
     read_json,
+    read_json_path,
     write_json,
     write_json_path,
 )
 from common.path_utils import get_project_root
-from common.logger import _subscribers, log, register_queue, unregister_queue
+from common.logger import log, set_log_file
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -219,30 +220,16 @@ async def get_collector_status(task_id: str):
     return task
 
 
-@router.get("/collector/sse/{task_id}")
-async def collector_sse(task_id: str):
-    """SSE 实时推送采集日志。"""
-    queue = register_queue(task_id)
-
-    async def event_generator():
-        try:
-            while True:
-                event = await queue.get()
-                yield event
-                if "event: complete" in event or "event: error" in event:
-                    break
-        finally:
-            unregister_queue(task_id, queue)
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
+@router.get("/collector/logs/{task_id}")
+async def get_collector_logs(task_id: str):
+    """读取采集任务日志。"""
+    log_dir = get_project_root() / "backend" / "log"
+    if not log_dir.exists():
+        return ""
+    log_files = list(log_dir.glob(f"*_{task_id}.log"))
+    if not log_files:
+        return ""
+    return log_files[0].read_text(encoding="utf-8")
 
 
 @router.post("/collector/config")
@@ -254,20 +241,42 @@ async def save_collector_config(config_name: str, req: dict[str, Any]):
     return {"path": str(path)}
 
 
-def _send_complete(task_id: str) -> None:
-    """向 SSE 队列发送完成事件。"""
-    payload = json.dumps({"status": "done", "task_id": task_id})
-    complete_event = f"event: complete\ndata: {payload}\n\n"
-    for q in list(_subscribers.get(task_id, [])):
-        q.put_nowait(complete_event)
+@router.get("/collector/configs")
+async def list_collector_configs():
+    """列出所有已保存的爬虫配置。"""
+    config_dir = get_project_root() / "backend" / "database" / "crawler"
+    if not config_dir.exists():
+        return {"configs": []}
+
+    files = list_json_files(config_dir)
+    # 从 config_xxx.json 提取配置名 xxx
+    names = []
+    for f in files:
+        if f.name.startswith("config_") and f.name.endswith(".json"):
+            names.append(f.name[len("config_") : -len(".json")])
+    return {"configs": names}
 
 
-def _send_error(task_id: str, error: str) -> None:
-    """向 SSE 队列发送错误事件。"""
-    payload = json.dumps({"error": error})
-    error_event = f"event: error\ndata: {payload}\n\n"
-    for q in list(_subscribers.get(task_id, [])):
-        q.put_nowait(error_event)
+@router.get("/collector/config/{config_name}")
+async def get_collector_config(config_name: str):
+    """加载指定配置。"""
+    config_dir = get_project_root() / "backend" / "database" / "crawler"
+    path = config_dir / f"config_{config_name}.json"
+    data = read_json_path(path)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"配置不存在: {config_name}")
+    return {"name": config_name, "params": data}
+
+
+@router.delete("/collector/config/{config_name}")
+async def delete_collector_config(config_name: str):
+    """删除指定配置。"""
+    config_dir = get_project_root() / "backend" / "database" / "crawler"
+    path = config_dir / f"config_{config_name}.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"配置不存在: {config_name}")
+    path.unlink()
+    return {"message": f"配置已删除: {config_name}"}
 
 
 # ── 后台任务 ──────────────────────────────────────────────
@@ -299,6 +308,14 @@ def _sync_analyze(filename: str, source: str) -> None:
 async def _run_app_scraper(task_id: str, params: dict) -> None:
     """后台运行 app_uiautomator2 采集器（同步，需在线程池中执行）。"""
     _collector_tasks[task_id]["status"] = "running"
+
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    app_type = params.get("app_type", "boss")
+    log_dir = get_project_root() / "backend" / "log"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / f"{date_str}_{app_type}_{task_id}.log"
+    set_log_file(str(log_file))
+
     log("开始执行 app_uiautomator2 采集...", task_id=task_id)
 
     try:
@@ -312,12 +329,10 @@ async def _run_app_scraper(task_id: str, params: dict) -> None:
         _collector_tasks[task_id]["status"] = "done"
         _collector_tasks[task_id]["output"] = output
         log("采集任务完成", level="INFO", task_id=task_id)
-        _send_complete(task_id)
     except Exception as exc:
         _collector_tasks[task_id]["status"] = "error"
         _collector_tasks[task_id]["error"] = str(exc)
         log(f"采集失败: {exc}", level="ERROR", task_id=task_id)
-        _send_error(task_id, str(exc))
 
 
 def _sync_run_app_scraper(task_id: str, params: dict) -> str:
@@ -340,6 +355,13 @@ def _sync_run_app_scraper(task_id: str, params: dict) -> str:
 async def _run_browser_scraper(task_id: str, params: dict) -> None:
     """后台运行 browser_playwright 采集器（本身就是 async）。"""
     _collector_tasks[task_id]["status"] = "running"
+
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    log_dir = get_project_root() / "backend" / "log"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / f"{date_str}_browser_playwright_{task_id}.log"
+    set_log_file(str(log_file))
+
     log("开始执行 browser_playwright 采集...", task_id=task_id)
 
     try:
@@ -354,13 +376,20 @@ async def _run_browser_scraper(task_id: str, params: dict) -> None:
             delay=params.get("delay", 3.0),
             output_filename=params.get("output_filename", "scraped_data.json"),
             task_id=task_id,
+            detail_fields=params.get("detail_fields"),
+            detail_container_selector=params.get("detail_container_selector"),
+            detail_url_field=params.get("detail_url_field"),
+            detail_url_attribute=params.get("detail_url_attribute", "href"),
+            navigation_mode=params.get("navigation_mode", "go_back"),
+            back_wait_time=params.get("back_wait_time", 2.0),
+            detail_page_wait_time=params.get("detail_page_wait_time", 2.0),
+            max_detail_retries=params.get("max_detail_retries", 2),
+            continue_on_error=params.get("continue_on_error", True),
         )
         _collector_tasks[task_id]["status"] = "done"
         _collector_tasks[task_id]["output"] = output
         log("采集任务完成", level="INFO", task_id=task_id)
-        _send_complete(task_id)
     except Exception as exc:
         _collector_tasks[task_id]["status"] = "error"
         _collector_tasks[task_id]["error"] = str(exc)
         log(f"采集失败: {exc}", level="ERROR", task_id=task_id)
-        _send_error(task_id, str(exc))

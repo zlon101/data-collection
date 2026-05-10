@@ -6,6 +6,10 @@ from pathlib import Path
 
 from browser_playwright.browser import BrowserManager
 from browser_playwright.puppeteer import UniversalScraper, create_scraper_config
+from browser_playwright.puppeteer.merged_scraper import (
+    MergedScraper,
+    create_merged_scraper_config,
+)
 
 from common.file_manager import write_json_path
 from common.logger import log
@@ -20,6 +24,16 @@ async def run_browser_scraper(
     delay: float = 3.0,
     output_filename: str = "scraped_data.json",
     task_id: str | None = None,
+    # 详情页抓取参数
+    detail_fields: dict[str, str] | None = None,
+    detail_container_selector: str | None = None,
+    detail_url_field: str | None = None,
+    detail_url_attribute: str = "href",
+    navigation_mode: str = "go_back",
+    back_wait_time: float = 2.0,
+    detail_page_wait_time: float = 2.0,
+    max_detail_retries: int = 2,
+    continue_on_error: bool = True,
 ) -> str:
     """执行 browser_playwright 采集，返回输出文件路径。"""
     log("连接浏览器...", task_id=task_id)
@@ -32,7 +46,7 @@ async def run_browser_scraper(
 
         log(f"已连接页面: {page.url}", task_id=task_id)
 
-        config = create_scraper_config(
+        list_config = create_scraper_config(
             url=url,
             fields=fields,
             container_selector=container_selector,
@@ -41,9 +55,36 @@ async def run_browser_scraper(
             delay=delay,
         )
 
-        scraper = UniversalScraper(page, config)
-        log("开始抓取...", task_id=task_id)
-        data = await scraper.scrape_from_current_page()
+        # 判断是否启用详情页抓取模式
+        enable_detail = (
+            detail_fields is not None
+            and detail_container_selector is not None
+            and detail_url_field is not None
+        )
+
+        if enable_detail:
+            assert detail_fields is not None
+            assert detail_container_selector is not None
+            assert detail_url_field is not None
+            merged_config = create_merged_scraper_config(
+                list_config=list_config,
+                detail_fields=detail_fields,
+                detail_container_selector=detail_container_selector,
+                detail_url_field=detail_url_field,
+                detail_url_attribute=detail_url_attribute,
+                navigation_mode=navigation_mode,
+                back_wait_time=back_wait_time,
+                detail_page_wait_time=detail_page_wait_time,
+                max_detail_retries=max_detail_retries,
+                continue_on_error=continue_on_error,
+            )
+            scraper = MergedScraper(page, merged_config)
+            log("开始抓取（列表+详情页模式）...", task_id=task_id)
+            data = await scraper.scrape_from_current_page()
+        else:
+            scraper = UniversalScraper(page, list_config)
+            log("开始抓取...", task_id=task_id)
+            data = await scraper.scrape_from_current_page()
 
         if data:
             output_path = Path("local_data") / "raw" / output_filename

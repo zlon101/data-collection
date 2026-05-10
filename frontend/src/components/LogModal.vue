@@ -2,7 +2,7 @@
   <a-modal
     v-model:open="visible"
     title="采集日志"
-width="80%"
+    width="80%"
     :footer="null"
     @cancel="handleClose"
   >
@@ -16,11 +16,8 @@ width="80%"
         {{ task.task_id }} ({{ task.type }}) - {{ task.status }}
       </a-select-option>
     </a-select>
-    <div v-if="logs.length" class="log-viewer">
-      <div v-for="(entry, i) in logs" :key="i" class="log-line">
-        <span :class="['log-level', entry.level.toLowerCase()]">[{{ entry.level }}]</span>
-        <span class="log-msg">{{ entry.message }}</span>
-      </div>
+    <div v-if="logsText" class="log-viewer">
+      <pre>{{ logsText }}</pre>
     </div>
     <a-empty v-else description="暂无日志" />
   </a-modal>
@@ -29,7 +26,6 @@ width="80%"
 <script setup>
 import { ref, watch, onUnmounted } from 'vue';
 import client from '../api/client';
-import { createEventSource } from '../api/sse';
 
 const props = defineProps({
   taskId: { type: String, default: '' },
@@ -39,40 +35,47 @@ const visible = defineModel('visible', { type: Boolean, default: false });
 
 const tasks = ref([]);
 const selectedTaskId = ref('');
-const logs = ref([]);
-let es = null;
+const logsText = ref('');
+let pollingTimer = null;
 
 const fetchTasks = async () => {
   const res = await client.get('/collector/tasks');
-  tasks.value = res.data;
+  tasks.value = res;
+};
+
+const fetchLogs = async (id) => {
+  const res = await client.get(`/collector/logs/${id}`);
+  logsText.value = res;
+  const task = tasks.value.find(t => t.task_id === id);
+  if (task && task.status !== 'running' && task.status !== 'pending') {
+    stopPolling();
+  }
+};
+
+const startPolling = (id) => {
+  stopPolling();
+  fetchLogs(id);
+  pollingTimer = setInterval(() => fetchLogs(id), 1000);
+};
+
+const stopPolling = () => {
+  if (pollingTimer) {
+    clearInterval(pollingTimer);
+    pollingTimer = null;
+  }
 };
 
 const handleClose = () => {
-  if (es) {
-    es.close();
-    es = null;
-  }
-  logs.value = [];
+  stopPolling();
+  logsText.value = '';
   selectedTaskId.value = '';
 };
 
 const onTaskChange = (id) => {
-  if (es) {
-    es.close();
-    es = null;
-  }
-  logs.value = [];
+  stopPolling();
+  logsText.value = '';
   if (!id) return;
-
-  es = createEventSource(id, {
-    onLog: (entry) => {
-      logs.value.push(entry);
-    },
-    onComplete: () => {},
-    onError: (err) => {
-      logs.value.push({ level: 'ERROR', message: err.error });
-    },
-  });
+  startPolling(id);
 };
 
 watch(visible, async (val) => {
@@ -88,7 +91,7 @@ watch(visible, async (val) => {
 });
 
 onUnmounted(() => {
-  if (es) es.close();
+  stopPolling();
 });
 </script>
 
@@ -104,22 +107,9 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
-.log-line {
-  display: flex;
-  gap: 8px;
-  padding: 2px 0;
-}
-
-.log-level {
-  font-weight: bold;
-  min-width: 50px;
-}
-
-.log-level.info { color: #569cd6; }
-.log-level.warning { color: #dcdcaa; }
-.log-level.error { color: #f44747; }
-
-.log-msg {
-  flex: 1;
+.log-viewer pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>
