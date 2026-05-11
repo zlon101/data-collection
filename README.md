@@ -12,10 +12,10 @@
 | --- | --- | --- |
 | **包管理** | `uv` | 现代 Python 极速依赖管理，支持 Workspace 模式 |
 | **后端** | **FastAPI** | 异步高性能 REST API，集成 Swagger 文档 |
-| **前端** | **Vue3 + Vite + ECharts** | 响应式仪表盘，数据大屏展示 |
+| **前端** | **Vue3 + Vite + ECharts + Element Plus** | 响应式仪表盘，数据大屏展示 |
 | **AI 引擎** | **LangChain + Qwen** | 对接 DashScope API，执行摘要、情感分析、实体提取、视觉识别 |
 | **网页采集** | **Playwright** | CDP 连接已有 Chrome / 启动新实例，支持懒加载滚动、网络拦截 |
-| **移动端采集** | **Airtest / uiautomator2** | Android App 自动化（微信公众号等） |
+| **移动端采集** | **Airtest / uiautomator2** | Android App 自动化（微信公众号、Boss 直聘、智联招聘等） |
 | **OCR** | **rapidocr_onnxruntime** | 中文文字识别（可选） |
 | **存储** | **JSON File System** | 轻量级"文件即数据库"，通过 `common` 模块统一调度 |
 
@@ -27,14 +27,33 @@
 ├── pyproject.toml              # 根目录：uv Workspace 配置
 ├── .venv/                      # Workspace 共享 Python 虚拟环境
 ├── backend/                    # FastAPI 后端模块
-│   ├── api/                    # 路由接口 (REST API)
+│   ├── api/
+│   │   └── routes.py           # 全部 REST 路由 (数据/Job/采集/配置)
+│   ├── database/               # 轻量级文件数据库
+│   │   ├── job/                # Job 已读记录 (read_keys.json)
+│   │   └── crawler/            # 保存的爬虫配置 (config_*.json)
+│   ├── log/                    # 采集任务日志
 │   └── main.py                 # 后端入口
 ├── frontend/                   # Vue3 前端模块 (Vite)
-│   ├── src/                    # 页面组件与 ECharts 逻辑
-│   └── package.json
+│   └── src/
+│       ├── api/
+│       │   └── client.js       # API 请求封装
+│       ├── views/
+│       │   ├── Crawler.vue     # 采集任务主页
+│       │   └── Query.vue       # 数据查询与分析
+│       └── components/
+│           ├── AppCrawlerForm.vue      # App 采集表单入口
+│           ├── BossForm.vue            # Boss 直聘专用表单
+│           ├── ZhilianForm.vue         # 智联招聘专用表单
+│           ├── BrowserCrawlerForm.vue  # 浏览器采集表单
+│           ├── ConfigSelector.vue      # 配置选择/保存/删除
+│           ├── JobFileModal.vue        # Job 文件管理弹窗
+│           └── LogModal.vue            # 日志查看弹窗
 ├── common/                     # 共享工具模块
 │   ├── file_manager.py         # 统一的数据读写与 local_data 管理
-│   └── ocr_tools.py            # OCR 文字识别 (rapidocr_onnxruntime)
+│   ├── logger.py               # 日志系统
+│   ├── ocr_tools.py            # OCR 文字识别 (rapidocr_onnxruntime)
+│   └── path_utils.py           # 路径工具
 ├── ai_agent/                   # AI 分析模块 (LangChain)
 │   ├── agent_config.py         # LLM 创建与 Agent 配置 (create_llm)
 │   ├── agent_tools.py          # 浏览器 Agent 工具集
@@ -47,8 +66,8 @@
 │   │   │   ├── merged_scraper/      # 列表+详情合并抓取
 │   │   │   ├── network_intercept/   # API 网络拦截采集
 │   │   │   ├── browser_steps/       # 浏览器步骤执行器
-│   │   │   ├── puppeteer_tools.py   # 通用工具函数
 │   │   │   └── recruit_capture.py   # 微信招聘页面采集 (慢速滚动+截图)
+│   │   ├── launcher.py         # 采集启动器 (供后端调用)
 │   │   ├── examples/           # 示例脚本
 │   │   └── scripts/            # CLI 入口 (browser.py, docx2md.py)
 │   ├── app_airtest/            # App 自动化 (独立 venv，numpy<2)
@@ -61,7 +80,10 @@
 │   │   │   ├── detail_page_spider_universal.py  # 详情页解析
 │   │   │   ├── universal_page_parser.py     # 通用页面解析器
 │   │   │   └── exceptions.py                # 自定义异常
-│   │   └── examples/           # Boss直聘/智联招聘示例
+│   │   ├── launcher.py         # 采集启动器 (供后端调用)
+│   │   ├── examples/           # Boss直聘/智联招聘示例
+│   │   └── tools/
+│   │       └── merge_job_data.py  # Job 数据合并去重
 │   └── wx/                     # 微信公众号采集 (workspace member)
 │       ├── get_articles.py     # 公众号文章采集
 │       └── recruit_analyzer/   # 招聘文章分析
@@ -75,6 +97,7 @@
 ├── local_data/                 # 本地数据存储 (不提交 Git)
 │   ├── raw/                    # 采集的原始 JSON 数据
 │   ├── analyzed/               # LLM 处理后的结构化结果 (JSON + Markdown)
+│   ├── job/                    # Job 招聘数据
 │   └── screenshots/            # 页面截图 (PNG)
 └── .env                        # 环境配置 (API Keys, 浏览器配置等)
 ```
@@ -84,8 +107,8 @@
 ## 核心功能
 
 1. **全渠道采集**：
-   - **网页端**：Playwright 模拟浏览器，支持 CDP 连接、懒加载滚动、网络拦截
-   - **移动端**：Airtest（独立环境）和 uiautomator2 采集微信公众号、APP 内容
+   - **网页端**：Playwright 模拟浏览器，支持 CDP 连接、懒加载滚动、网络拦截、列表+详情合并抓取
+   - **移动端**：Airtest（独立环境）和 uiautomator2 采集微信公众号、Boss 直聘、智联招聘等 APP 内容
 2. **微信招聘文章分析**：
    - 慢速滚动触发图片懒加载 → 全页截图
    - OCR 识别截图文字（可选，rapidocr_onnxruntime）
@@ -98,6 +121,17 @@
 4. **可视化仪表盘**：
    - ECharts 渲染情感分布饼图、核心实体词云/柱状图
    - 文章列表及分析结果实时预览
+5. **Job 管理系统**：
+   - 招聘数据自动排除已读条目
+   - Job 文件浏览、查看、删除、合并去重
+   - 已读记录持久化存储
+6. **采集任务管理**：
+   - 通过 API 异步触发 app_uiautomator2 / browser_playwright 采集
+   - 实时查询任务状态、查看日志
+   - 支持取消正在运行的任务
+7. **配置管理**：
+   - 保存、加载、删除爬虫配置
+   - 前端支持配置快速复用
 
 ---
 
@@ -215,7 +249,7 @@ Workspace 成员之间的依赖使用 `[tool.uv.sources]` 声明 `{ workspace = 
 
 ### 数据流
 
-1. 采集器 → 原始 JSON 存入 `local_data/raw/`
+1. 采集器 → 原始 JSON 存入 `local_data/raw/` 或 `local_data/job/`
 2. 后端调用 `ai_agent` 进行 LLM 分析 → 结果存入 `local_data/analyzed/`
 3. 前端通过后端 API 读取分析结果并可视化
 
