@@ -8,6 +8,9 @@ FastAPI 路由：提供给前端调用的 REST 接口。
   GET  /api/analyze/status/{filename}  查询分析任务状态
   GET  /api/summary            返回最新 analyzed 文件的数据摘要
   GET  /api/jobs               获取招聘数据（支持筛选）
+  GET  /api/job/files          列出 local_data/job/ 中的文件
+  DELETE /api/job/files/{filename}     删除 job 文件
+  POST /api/job/merge          合并 job 目录所有文件
   POST /api/collector          触发爬虫采集任务
   GET  /api/collector/logs/{task_id}  读取采集任务日志
 """
@@ -179,6 +182,74 @@ async def get_jobs(
         ]
 
     return {"total": len(filtered), "items": filtered}
+
+
+# ── Job 文件管理 ─────────────────────────────────────────
+_job_dir = get_project_root() / "local_data" / "job"
+
+
+@router.get("/job/files")
+async def list_job_files():
+    """列出 local_data/job/ 中的所有 .json 文件。"""
+    if not _job_dir.exists():
+        return {"files": []}
+
+    files = []
+    for f in sorted(_job_dir.iterdir()):
+        if f.suffix == ".json" and f.is_file():
+            stat = f.stat()
+            files.append({
+                "filename": f.name,
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            })
+
+    return {"files": files}
+
+
+@router.get("/job/files/{filename}")
+async def get_job_file_content(filename: str):
+    """读取 local_data/job/ 中指定文件的内容。"""
+    file_path = _job_dir / filename
+    if not file_path.resolve().is_relative_to(_job_dir.resolve()):
+        raise HTTPException(status_code=400, detail="非法文件名")
+    data = read_json_path(file_path)
+    if data is None or not isinstance(data, list):
+        raise HTTPException(status_code=404, detail=f"文件不存在或格式错误: {filename}")
+    return {"filename": filename, "total": len(data), "items": data}
+
+
+@router.delete("/job/files/{filename}")
+async def delete_job_file(filename: str):
+    """删除 local_data/job/ 中的指定文件。"""
+    file_path = _job_dir / filename
+    # 安全检查：防止路径遍历
+    if not file_path.resolve().is_relative_to(_job_dir.resolve()):
+        raise HTTPException(status_code=400, detail="非法文件名")
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"文件不存在: {filename}")
+    file_path.unlink()
+    return {"message": f"文件已删除: {filename}"}
+
+
+@router.post("/job/merge")
+async def merge_job_files():
+    """合并 local_data/job/ 中的所有文件并去重。"""
+    if not _job_dir.exists():
+        raise HTTPException(status_code=404, detail="job 目录不存在")
+
+    try:
+        from collection_platform.app_uiautomator2.tools.merge_job_data import (
+            merge_and_deduplicate_data,
+            output_path,
+        )
+        merge_and_deduplicate_data()
+        return {
+            "message": "合并完成",
+            "output_file": str(output_path.name),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"合并失败: {e}")
 
 
 @router.post("/collector")

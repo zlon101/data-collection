@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 from common.file_manager import write_json_path, read_json_path, list_json_files
 
 from common.path_utils import get_project_root
-from app_uiautomator2.examples.config import SpeicalRe, parse_money
+from collection_platform.app_uiautomator2.examples.config import SpeicalRe, parse_money
 
 now = datetime.now()
 merged_file_name = f"merged_data_{now.strftime('%m%d')}.json"

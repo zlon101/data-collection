@@ -1,7 +1,9 @@
 <template>
   <div class="query-page">
+    <!-- 数据查询区域 -->
     <div class="filter-bar">
       <a-space>
+        <a-button @click="fileModalVisible = true">Job 文件管理</a-button>
         <a-select
           v-model:value="filters.activity"
           placeholder="活跃度"
@@ -27,10 +29,10 @@
         />
         <a-button type="primary" @click="fetchJobs">查询</a-button>
         <a-button @click="resetFilters">重置</a-button>
+        <p>总数: {{ tableData.length }}</p>
       </a-space>
     </div>
 
-    <p>总数: {{ tableData.length }}</p>
     <a-table
       :columns="columns"
       :data-source="tableData"
@@ -59,12 +61,119 @@
         </a-descriptions>
       </template>
     </a-modal>
+
+    <!-- Job 文件管理弹窗 -->
+    <a-modal
+      v-model:open="fileModalVisible"
+      title="Job 文件管理"
+      width="800px"
+      :footer="null"
+    >
+      <div class="file-toolbar">
+        <a-button type="primary" @click="fetchFiles">刷新</a-button>
+        <a-popconfirm
+          title="确认合并所有文件？合并后将删除原文件"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="mergeFiles"
+        >
+          <a-button type="primary" danger :loading="merging">合并全部</a-button>
+        </a-popconfirm>
+        <span class="file-count">共 {{ fileList.length }} 个文件</span>
+      </div>
+      <a-table
+        :columns="fileColumns"
+        :data-source="fileList"
+        :loading="fileLoading"
+        :pagination="false"
+        row-key="filename"
+        size="small"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'filename'">
+            <span style="cursor: pointer;" @click="loadJobFile(record.filename)">{{ record.filename }}</span>
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <a-space>
+              <a-popconfirm
+                v-if="!record.filename.startsWith('merged_data')"
+                title="确认删除该文件？"
+                ok-text="删除"
+                cancel-text="取消"
+                @confirm="deleteFile(record.filename)"
+              >
+                <a-button type="link" danger size="small">删除</a-button>
+              </a-popconfirm>
+            </a-space>
+          </template>
+        </template>
+      </a-table>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { message } from 'ant-design-vue';
 import client from '../api/client';
+
+// ── 文件管理 ──
+const fileList = ref([]);
+const fileLoading = ref(false);
+const merging = ref(false);
+const fileModalVisible = ref(false);
+
+const fileColumns = [
+  { title: '文件名', dataIndex: 'filename', key: 'filename', width: 250 },
+  { title: '大小', dataIndex: 'size', key: 'size', width: 100, customRender: ({ text }) => text ? (text / 1024).toFixed(1) + ' KB' : '0 B' },
+  { title: '修改时间', dataIndex: 'modified', key: 'modified', width: 160 },
+  { title: '操作', key: 'action', width: 120 },
+];
+
+const fetchFiles = async () => {
+  fileLoading.value = true;
+  try {
+    const res = await client.get('/job/files');
+    fileList.value = res.files || [];
+  } catch (e) {
+    console.error('获取文件列表失败:', e);
+  } finally {
+    fileLoading.value = false;
+  }
+};
+
+const deleteFile = async (filename) => {
+  try {
+    await client.delete(`/job/files/${filename}`);
+    message.success(`文件已删除: ${filename}`);
+    if (activeJobFile.value === filename) {
+      activeJobFile.value = null;
+      await fetchJobs();
+    }
+    await fetchFiles();
+  } catch (e) {
+    message.error('删除失败: ' + (e.response?.data?.detail || e.message));
+  }
+};
+
+const mergeFiles = async () => {
+  merging.value = true;
+  activeJobFile.value = null;
+  try {
+    const res = await client.post('/job/merge');
+    message.success(`合并完成: ${res.output_file}`);
+    await fetchFiles();
+    // 自动加载合并文件内容
+    await loadJobFile(res.output_file);
+  } catch (e) {
+    message.error('合并失败: ' + (e.response?.data?.detail || e.message));
+  } finally {
+    merging.value = false;
+  }
+};
+
+// ── 数据查询 ──
+const activeJobFile = ref(null); // 当前查看的文件名
 
 const filters = ref({
   activity: undefined,
@@ -99,8 +208,31 @@ function parseSalaryMin(salary) {
   return val;
 }
 
+const loadJobFile = async (filename) => {
+  loading.value = true;
+  activeJobFile.value = filename;
+  try {
+    const res = await client.get(`/job/files/${filename}`);
+    tableData.value = res.items || [];
+  } catch (e) {
+    console.error('加载文件失败:', e);
+    tableData.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+const fetchJobFiles = async () => {
+  if (activeJobFile.value) {
+    await loadJobFile(activeJobFile.value);
+  } else {
+    await fetchJobs();
+  }
+};
+
 const fetchJobs = async () => {
   loading.value = true;
+  activeJobFile.value = null;
   try {
     const params = {};
     if (filters.value.activity) params.activity = filters.value.activity;
@@ -130,6 +262,7 @@ const showDetail = (record) => {
 };
 
 onMounted(() => {
+  fetchFiles();
   fetchJobs();
 });
 </script>
@@ -139,6 +272,19 @@ onMounted(() => {
   background: #fff;
   padding: 20px;
   border-radius: 8px;
+}
+
+.file-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.file-count {
+  margin-left: 8px;
+  color: #999;
+  font-size: 13px;
 }
 
 .filter-bar {
