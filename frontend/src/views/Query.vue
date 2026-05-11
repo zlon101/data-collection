@@ -4,6 +4,21 @@
     <div class="filter-bar">
       <a-space>
         <a-button @click="fileModalVisible = true">Job 文件管理</a-button>
+        <a-button
+          type="primary"
+          @click="markRead"
+          :disabled="selectedKeys.length === 0"
+        >
+          已读 ({{ selectedKeys.length }})
+        </a-button>
+        <a-popconfirm
+          title="确认清空全部已读记录？已读数据将重新显示"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="clearRead"
+        >
+          <a-button>清空已读</a-button>
+        </a-popconfirm>
         <a-select
           v-model:value="filters.activity"
           placeholder="活跃度"
@@ -51,6 +66,7 @@
       :loading="loading"
       :pagination="false"
       row-key="unique_key"
+      :row-selection="rowSelection"
     />
 
     <!-- Job 文件管理弹窗 -->
@@ -64,8 +80,42 @@
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue';
+import { message } from 'ant-design-vue';
 import client from '../api/client';
 import JobFileModal from '../components/JobFileModal.vue';
+
+// ── 已读管理 ──
+const selectedKeys = ref([]);
+
+const rowSelection = computed(() => ({
+  selectedRowKeys: selectedKeys.value,
+  onChange: (keys) => {
+    selectedKeys.value = keys;
+  },
+}));
+
+const markRead = async () => {
+  if (selectedKeys.value.length === 0) return;
+  try {
+    const count = selectedKeys.value.length;
+    await client.post('/job/read', { keys: selectedKeys.value });
+    message.success(`已标记 ${count} 条数据`);
+    selectedKeys.value = [];
+    await fetchJobs();
+  } catch (e) {
+    message.error('操作失败: ' + (e.response?.data?.detail || e.message));
+  }
+};
+
+const clearRead = async () => {
+  try {
+    await client.delete('/job/read');
+    message.success('已清空全部已读记录');
+    await fetchJobs();
+  } catch (e) {
+    message.error('操作失败: ' + (e.response?.data?.detail || e.message));
+  }
+};
 
 // ── 文件管理 ──
 const fileModalVisible = ref(false);
@@ -173,6 +223,7 @@ const loadJobFile = async (filename) => {
   filters.max_distance = undefined;
   filters.source = undefined;
   filters.date_from = undefined;
+  selectedKeys.value = [];
   try {
     const res = await client.get(`/job/files/${filename}`);
     tableData.value = res.items || [];
@@ -187,6 +238,7 @@ const loadJobFile = async (filename) => {
 const fetchJobs = async () => {
   loading.value = true;
   activeJobFile.value = null;
+  selectedKeys.value = [];
   try {
     const res = await client.get('/jobs');
     tableData.value = res.items || [];

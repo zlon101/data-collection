@@ -22,7 +22,7 @@ from app_uiautomator2.examples.config import (
     SpeicalRe,
     parse_money,
 )
-from app_uiautomator2.examples.merge_job_data import get_seen_unique_keys
+from app_uiautomator2.tools.merge_job_data import get_seen_unique_keys
 from app_uiautomator2.lib import DetailPageSpiderUniversal, ListPageSpider, ListPageSpiderParam
 
 console = Console()

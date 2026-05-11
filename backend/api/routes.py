@@ -28,7 +28,6 @@ from common.file_manager import (
     analyzed_filename_for,
     list_files,
     list_json_files,
-    parse_salary,
     read_job_data,
     read_json,
     read_json_path,
@@ -155,18 +154,55 @@ async def get_summary(source: str = "wechat"):
 
 
 # ── 新增接口 ──────────────────────────────────────────────
-@router.get("/jobs")
-async def get_jobs(
-    activity: str = "",
-    min_salary: float = 0,
-    max_distance: float = 0,
-):
-    """获取招聘数据，支持活跃度、最低薪资、最大距离过滤。"""
-    all_data = read_job_data()
+_job_db_dir = get_project_root() / "backend" / "database" / "job"
+_read_keys_path = _job_db_dir / "read_keys.json"
 
-    filtered = all_data
+
+def _load_read_keys() -> set[str]:
+    """加载已读 unique_key 集合。"""
+    if _read_keys_path.exists():
+        data = read_json_path(_read_keys_path)
+        if data and isinstance(data, list):
+            return set(data)
+    return set()
+
+
+def _save_read_keys(keys: set[str]) -> None:
+    """保存已读 unique_key 集合。"""
+    _job_db_dir.mkdir(parents=True, exist_ok=True)
+    write_json_path(sorted(keys), _read_keys_path)
+
+
+@router.get("/jobs")
+async def get_jobs():
+    """获取招聘数据，自动排除已读数据。"""
+    all_data = read_job_data()
+    read_keys = _load_read_keys()
+
+    filtered = [item for item in all_data if item.get("unique_key") not in read_keys]
 
     return {"total": len(filtered), "items": filtered}
+
+
+@router.post("/job/read")
+async def mark_job_read(req: dict[str, Any]):
+    """标记指定 unique_key 的数据为已读（隐藏）。"""
+    keys = req.get("keys", [])
+    if not keys:
+        return {"count": 0, "message": "未提供数据"}
+
+    read_keys = _load_read_keys()
+    read_keys.update(keys)
+    _save_read_keys(read_keys)
+    return {"count": len(keys), "message": f"已标记 {len(keys)} 条数据"}
+
+
+@router.delete("/job/read")
+async def clear_job_read():
+    """清空全部已读记录。"""
+    if _read_keys_path.exists():
+        _read_keys_path.unlink()
+    return {"message": "已清空全部已读记录"}
 
 
 # ── Job 文件管理 ─────────────────────────────────────────

@@ -48,7 +48,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import client from '../api/client';
 
@@ -62,6 +62,13 @@ const visible = computed({
   get: () => props.open,
   set: (val) => emit('update:open', val),
 });
+
+watch(
+  () => props.open,
+  (val) => {
+    if (val) fetchFiles();
+  },
+);
 
 const fileList = ref([]);
 const fileLoading = ref(false);
