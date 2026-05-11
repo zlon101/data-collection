@@ -47,7 +47,7 @@
 
     <a-table
       :columns="columns"
-:data-source="filteredData"
+      :data-source="filteredData"
       :loading="loading"
       :pagination="false"
       row-key="unique_key"
@@ -56,7 +56,9 @@
     <!-- Job 文件管理弹窗 -->
     <JobFileModal
       v-model:open="fileModalVisible"
-@load-file="loadJobFile" @file-deleted="handleFileDeleted" />
+      @load-file="loadJobFile"
+      @file-deleted="handleFileDeleted"
+    />
   </div>
 </template>
 
@@ -83,10 +85,10 @@ const filters = reactive({
   min_salary: undefined,
   max_distance: undefined,
   source: undefined,
-  date_from: undefined,  // MM-DD
+  date_from: undefined, // MM-DD
 });
 
-const tableData = ref([]);  // 全量数据
+const tableData = ref([]); // 全量数据
 const loading = ref(false);
 
 // 前端筛选
@@ -94,27 +96,29 @@ const filteredData = computed(() => {
   let result = tableData.value;
 
   if (filters.activity) {
-    result = result.filter(item => item.活跃度?.includes(filters.activity));
+    result = result.filter((item) => item.活跃度?.includes(filters.activity));
   }
 
   if (filters.min_salary) {
-    result = result.filter(item => parseSalaryMin(item.薪资, true) >= filters.min_salary);
+    result = result.filter(
+      (item) => parseSalaryMin(item.薪资, true) >= filters.min_salary,
+    );
   }
 
   if (filters.max_distance) {
-    result = result.filter(item => {
+    result = result.filter((item) => {
       const dist = parseFloat(item.距离 || 0);
       return !isNaN(dist) && dist <= filters.max_distance;
     });
   }
 
   if (filters.source) {
-    result = result.filter(item => item.来源 === filters.source);
+    result = result.filter((item) => item.来源 === filters.source);
   }
 
   if (filters.date_from) {
     // 输入 MM-DD，筛选该日期及之后的数据
-    result = result.filter(item => {
+    result = result.filter((item) => {
       if (!item.日期) return false;
       const itemDate = item.日期.slice(0, 5);
       return itemDate >= filters.date_from;
@@ -127,10 +131,28 @@ const filteredData = computed(() => {
 const columns = [
   { title: '公司', dataIndex: '公司', key: '公司', width: 150 },
   { title: '职位', dataIndex: '职位', key: '职位', width: 150 },
-  { title: '薪资', dataIndex: '薪资', key: '薪资', width: 100, sorter: (a, b) => parseSalaryMin(a.薪资) - parseSalaryMin(b.薪资) },
+  {
+    title: '薪资',
+    dataIndex: '薪资',
+    key: '薪资',
+    width: 100,
+    sorter: (a, b) => parseSalaryMin(a.薪资) - parseSalaryMin(b.薪资),
+  },
   { title: '活跃度', dataIndex: '活跃度', key: '活跃度', width: 150 },
-  { title: '距离', dataIndex: '距离', key: '距离', width: 80, sorter: (a, b) => parseFloat(a.距离 || 0) - parseFloat(b.距离 || 0) },
-  { title: '详细地址', dataIndex: '详细地址', key: '详细地址', width: 200, ellipsis: true },
+  {
+    title: '距离',
+    dataIndex: '距离',
+    key: '距离',
+    width: 80,
+    sorter: (a, b) => parseFloat(a.距离 || 0) - parseFloat(b.距离 || 0),
+  },
+  {
+    title: '详细地址',
+    dataIndex: '详细地址',
+    key: '详细地址',
+    width: 200,
+    ellipsis: true,
+  },
   { title: '来源', dataIndex: '来源', key: '来源', width: 80 },
   { title: '日期', dataIndex: '日期', key: '日期', width: 120 },
 ];

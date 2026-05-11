@@ -165,21 +165,6 @@ async def get_jobs(
     all_data = read_job_data()
 
     filtered = all_data
-    if activity:
-        filtered = [item for item in filtered if activity in item.get("活跃度", "")]
-
-    if min_salary > 0:
-        filtered = [
-            item for item in filtered
-            if (salary := parse_salary(item.get("薪资", ""))) and salary[0] >= min_salary
-        ]
-
-    if max_distance > 0:
-        filtered = [
-            item for item in filtered
-            if (dist_str := item.get("距离", "").strip())
-            and float(dist_str) <= max_distance
-        ]
 
     return {"total": len(filtered), "items": filtered}
 
