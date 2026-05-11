@@ -27,164 +27,102 @@
           :precision="1"
           style="width: 160px"
         />
-        <a-button type="primary" @click="fetchJobs">查询</a-button>
-        <a-button @click="resetFilters">重置</a-button>
-        <p>总数: {{ tableData.length }}</p>
+        <a-select
+          v-model:value="filters.source"
+          placeholder="来源"
+          style="width: 120px"
+          allow-clear
+        >
+          <a-select-option value="boss">boss</a-select-option>
+          <a-select-option value="zhilian">zhilian</a-select-option>
+        </a-select>
+        <a-input
+          v-model:value="filters.date_from"
+          placeholder="日期起 (MM-DD)"
+          style="width: 140px"
+        />
+        <span class="count-label">总数: {{ filteredData.length }}</span>
       </a-space>
     </div>
 
     <a-table
       :columns="columns"
-      :data-source="tableData"
+:data-source="filteredData"
       :loading="loading"
       :pagination="false"
       row-key="unique_key"
     />
 
-    <a-modal
-      v-model:open="detailVisible"
-      :title="detailItem?.职位 + ' - ' + detailItem?.公司"
-      width="700px"
-    >
-      <template v-if="detailItem">
-        <a-descriptions bordered :column="2" size="small">
-          <a-descriptions-item label="薪资">{{ detailItem.薪资 }}</a-descriptions-item>
-          <a-descriptions-item label="距离">{{ detailItem.距离 }} km</a-descriptions-item>
-          <a-descriptions-item label="活跃度">{{ detailItem.活跃度 }}</a-descriptions-item>
-          <a-descriptions-item label="HR">{{ detailItem.HR }}</a-descriptions-item>
-          <a-descriptions-item label="详细地址" :span="2">{{ detailItem.详细地址 }}</a-descriptions-item>
-          <a-descriptions-item label="日期">{{ detailItem.日期 }}</a-descriptions-item>
-          <a-descriptions-item label="来源">{{ detailItem.来源 }}</a-descriptions-item>
-          <a-descriptions-item label="职位描述" :span="2">
-            <pre class="job-desc">{{ detailItem.职位描述 }}</pre>
-          </a-descriptions-item>
-        </a-descriptions>
-      </template>
-    </a-modal>
-
     <!-- Job 文件管理弹窗 -->
-    <a-modal
+    <JobFileModal
       v-model:open="fileModalVisible"
-      title="Job 文件管理"
-      width="800px"
-      :footer="null"
-    >
-      <div class="file-toolbar">
-        <a-button type="primary" @click="fetchFiles">刷新</a-button>
-        <a-popconfirm
-          title="确认合并所有文件？合并后将删除原文件"
-          ok-text="确认"
-          cancel-text="取消"
-          @confirm="mergeFiles"
-        >
-          <a-button type="primary" danger :loading="merging">合并全部</a-button>
-        </a-popconfirm>
-        <span class="file-count">共 {{ fileList.length }} 个文件</span>
-      </div>
-      <a-table
-        :columns="fileColumns"
-        :data-source="fileList"
-        :loading="fileLoading"
-        :pagination="false"
-        row-key="filename"
-        size="small"
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'filename'">
-            <span style="cursor: pointer;" @click="loadJobFile(record.filename)">{{ record.filename }}</span>
-          </template>
-          <template v-else-if="column.key === 'action'">
-            <a-space>
-              <a-popconfirm
-                v-if="!record.filename.startsWith('merged_data')"
-                title="确认删除该文件？"
-                ok-text="删除"
-                cancel-text="取消"
-                @confirm="deleteFile(record.filename)"
-              >
-                <a-button type="link" danger size="small">删除</a-button>
-              </a-popconfirm>
-            </a-space>
-          </template>
-        </template>
-      </a-table>
-    </a-modal>
+@load-file="loadJobFile" @file-deleted="handleFileDeleted" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { message } from 'ant-design-vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 import client from '../api/client';
+import JobFileModal from '../components/JobFileModal.vue';
 
 // ── 文件管理 ──
-const fileList = ref([]);
-const fileLoading = ref(false);
-const merging = ref(false);
 const fileModalVisible = ref(false);
 
-const fileColumns = [
-  { title: '文件名', dataIndex: 'filename', key: 'filename', width: 250 },
-  { title: '大小', dataIndex: 'size', key: 'size', width: 100, customRender: ({ text }) => text ? (text / 1024).toFixed(1) + ' KB' : '0 B' },
-  { title: '修改时间', dataIndex: 'modified', key: 'modified', width: 160 },
-  { title: '操作', key: 'action', width: 120 },
-];
-
-const fetchFiles = async () => {
-  fileLoading.value = true;
-  try {
-    const res = await client.get('/job/files');
-    fileList.value = res.files || [];
-  } catch (e) {
-    console.error('获取文件列表失败:', e);
-  } finally {
-    fileLoading.value = false;
-  }
-};
-
-const deleteFile = async (filename) => {
-  try {
-    await client.delete(`/job/files/${filename}`);
-    message.success(`文件已删除: ${filename}`);
-    if (activeJobFile.value === filename) {
-      activeJobFile.value = null;
-      await fetchJobs();
-    }
-    await fetchFiles();
-  } catch (e) {
-    message.error('删除失败: ' + (e.response?.data?.detail || e.message));
-  }
-};
-
-const mergeFiles = async () => {
-  merging.value = true;
-  activeJobFile.value = null;
-  try {
-    const res = await client.post('/job/merge');
-    message.success(`合并完成: ${res.output_file}`);
-    await fetchFiles();
-    // 自动加载合并文件内容
-    await loadJobFile(res.output_file);
-  } catch (e) {
-    message.error('合并失败: ' + (e.response?.data?.detail || e.message));
-  } finally {
-    merging.value = false;
+const handleFileDeleted = (filename) => {
+  if (activeJobFile.value === filename) {
+    activeJobFile.value = null;
+    fetchJobs();
   }
 };
 
 // ── 数据查询 ──
 const activeJobFile = ref(null); // 当前查看的文件名
 
-const filters = ref({
+const filters = reactive({
   activity: undefined,
   min_salary: undefined,
   max_distance: undefined,
+  source: undefined,
+  date_from: undefined,  // MM-DD
 });
 
-const tableData = ref([]);
+const tableData = ref([]);  // 全量数据
 const loading = ref(false);
-const detailVisible = ref(false);
-const detailItem = ref(null);
+
+// 前端筛选
+const filteredData = computed(() => {
+  let result = tableData.value;
+
+  if (filters.activity) {
+    result = result.filter(item => item.活跃度?.includes(filters.activity));
+  }
+
+  if (filters.min_salary) {
+    result = result.filter(item => parseSalaryMin(item.薪资, true) >= filters.min_salary);
+  }
+
+  if (filters.max_distance) {
+    result = result.filter(item => {
+      const dist = parseFloat(item.距离 || 0);
+      return !isNaN(dist) && dist <= filters.max_distance;
+    });
+  }
+
+  if (filters.source) {
+    result = result.filter(item => item.来源 === filters.source);
+  }
+
+  if (filters.date_from) {
+    // 输入 MM-DD，筛选该日期及之后的数据
+    result = result.filter(item => {
+      if (!item.日期) return false;
+      const itemDate = item.日期.slice(0, 5);
+      return itemDate >= filters.date_from;
+    });
+  }
+
+  return result;
+});
 
 const columns = [
   { title: '公司', dataIndex: '公司', key: '公司', width: 150 },
@@ -197,20 +135,22 @@ const columns = [
   { title: '日期', dataIndex: '日期', key: '日期', width: 120 },
 ];
 
-function parseSalaryMin(salary) {
+function parseSalaryMin(salary, isMax = false) {
   if (!salary) return 0;
   const nums = salary.match(/[\d.]+/g);
   if (!nums || nums.length < 2) return 0;
-  let val = parseFloat(nums[0]);
-  if (salary.includes('万')) val *= 10;
-  else if (salary.includes('k') || salary.includes('K')) val *= 1;
-  else if (salary.includes('元')) val /= 1000;
+  let val = parseFloat(isMax ? nums[1] : nums[0]);
   return val;
 }
 
 const loadJobFile = async (filename) => {
   loading.value = true;
   activeJobFile.value = filename;
+  filters.activity = undefined;
+  filters.min_salary = undefined;
+  filters.max_distance = undefined;
+  filters.source = undefined;
+  filters.date_from = undefined;
   try {
     const res = await client.get(`/job/files/${filename}`);
     tableData.value = res.items || [];
@@ -222,23 +162,11 @@ const loadJobFile = async (filename) => {
   }
 };
 
-const fetchJobFiles = async () => {
-  if (activeJobFile.value) {
-    await loadJobFile(activeJobFile.value);
-  } else {
-    await fetchJobs();
-  }
-};
-
 const fetchJobs = async () => {
   loading.value = true;
   activeJobFile.value = null;
   try {
-    const params = {};
-    if (filters.value.activity) params.activity = filters.value.activity;
-    if (filters.value.min_salary) params.min_salary = filters.value.min_salary;
-    if (filters.value.max_distance) params.max_distance = filters.value.max_distance;
-    const res = await client.get('/jobs', { params });
+    const res = await client.get('/jobs');
     tableData.value = res.items || [];
   } catch (e) {
     console.error('获取招聘数据失败:', e);
@@ -247,22 +175,7 @@ const fetchJobs = async () => {
   }
 };
 
-const resetFilters = () => {
-  filters.value = {
-    activity: undefined,
-    min_salary: undefined,
-    max_distance: undefined,
-  };
-  fetchJobs();
-};
-
-const showDetail = (record) => {
-  detailItem.value = record;
-  detailVisible.value = true;
-};
-
 onMounted(() => {
-  fetchFiles();
   fetchJobs();
 });
 </script>
@@ -274,30 +187,13 @@ onMounted(() => {
   border-radius: 8px;
 }
 
-.file-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.file-count {
-  margin-left: 8px;
-  color: #999;
-  font-size: 13px;
-}
-
 .filter-bar {
   margin-bottom: 16px;
 }
 
-.job-desc {
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 400px;
-  overflow-y: auto;
+.count-label {
   margin: 0;
   font-size: 14px;
-  line-height: 1.6;
+  color: #666;
 }
 </style>
