@@ -38,6 +38,7 @@ class ListPageSpiderParam:
     item_processing_callback: 单项处理回调函数（用于解析详情页并返回）
                             点击由 ListPageSpider 内部完成，回调只负责解析和返回
                             返回: 详情页数据字典
+    is_cancelled: 取消检查回调，返回 True 表示需要停止
     """
 
     # 必填参数 (无默认值)
@@ -55,6 +56,7 @@ class ListPageSpiderParam:
     item_processing_callback: Callable[[], dict[str, Any]] | None = None
     item_filter: Callable[[dict[str, str]], bool] | None = None
     format_data: Callable[[list[dict[str, str]]], None] | None = None
+    is_cancelled: Callable[[], bool] | None = None
 
 
 class ListPageSpider:
@@ -80,6 +82,7 @@ class ListPageSpider:
 
         empty_scroll_count = 0
         scroll_count = 0
+        self.cancelled = False
 
         try:
             with Progress(
@@ -96,6 +99,11 @@ class ListPageSpider:
                 )
 
                 while len(self.data_list) < self.config.max_items:
+                    if self.config.is_cancelled and self.config.is_cancelled():
+                        self.cancelled = True
+                        console.print("\n[yellow]⚠ 用户停止采集[/yellow]")
+                        break
+
                     scroll_count += 1
 
                     # 解析当前页面（包含详情页交互逻辑）

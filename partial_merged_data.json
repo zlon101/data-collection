@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "total_items": 0,
+    "statistics": {
+      "total_list_items": 30,
+      "successful_details": 0,
+      "failed_details": 0,
+      "skipped_details": 30,
+      "start_time": "2026-05-10T22:21:37.543020",
+      "end_time": null
+    },
+    "config": {
+      "list_url": "https://segmentfault.com/",
+      "list_fields": [
+        "标题",
+        "阅读数"
+      ],
+      "detail_fields": [
+        "地点",
+        "关注"
+      ],
+      "detail_url_field": "标题"
+    }
+  },
+  "data": []
+}

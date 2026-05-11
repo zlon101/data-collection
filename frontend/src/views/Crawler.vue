@@ -31,9 +31,12 @@
       </div>
     </div>
 
-    <div style="margin-top: 16px">
+    <div style="margin-top: 16px; display: flex; gap: 12px; align-items: center">
       <a-button type="primary" size="large" @click="startCrawl" :disabled="running" :loading="running">
         {{ running ? '采集中...' : '开始采集' }}
+      </a-button>
+      <a-button danger size="large" @click="stopCrawl" :disabled="!running" v-if="running">
+        停止采集
       </a-button>
     </div>
 
@@ -116,9 +119,65 @@ const getActiveFormRef = () => {
   return browserFormRef;
 };
 
+const pollTaskStatus = async (tid) => {
+  const maxAttempts = 600; // 最多轮询 600 次
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 每 2 秒轮询一次
+    attempts += 1;
+
+    try {
+      const res = await client.get(`/collector/status/${tid}`);
+      if (res.status === 'done') {
+        statusColor.value = 'green';
+        statusLabel.value = '采集完成';
+        running.value = false;
+        return;
+      } else if (res.status === 'cancelled') {
+        statusColor.value = 'orange';
+        statusLabel.value = '已取消';
+        running.value = false;
+        return;
+      } else if (res.status === 'cancelling') {
+        statusColor.value = 'orange';
+        statusLabel.value = '正在停止...';
+        // 继续轮询，等待 scraper 自然退出
+      } else if (res.status === 'error') {
+        statusColor.value = 'red';
+        statusLabel.value = '采集失败: ' + (res.error || '未知错误');
+        running.value = false;
+        return;
+      }
+      // status 为 'running' 或 'pending' 时继续轮询
+    } catch (e) {
+      statusColor.value = 'red';
+      statusLabel.value = '状态查询失败: ' + e.message;
+      running.value = false;
+      return;
+    }
+  }
+
+  // 超时
+  statusColor.value = 'orange';
+  statusLabel.value = '采集超时，请查看日志';
+  running.value = false;
+};
+
+const stopCrawl = async () => {
+  if (!taskId.value) return;
+  try {
+    await client.post(`/collector/${taskId.value}/cancel`);
+    statusColor.value = 'orange';
+    statusLabel.value = '正在停止...';
+  } catch (e) {
+    message.error('停止失败: ' + e.message);
+  }
+};
+
 const startCrawl = async () => {
   statusColor.value = 'blue';
-  statusLabel.value = '运行中';
+  statusLabel.value = '提交中...';
   running.value = true;
 
   let payload;
@@ -131,9 +190,10 @@ const startCrawl = async () => {
   try {
     const res = await client.post('/collector', payload);
     taskId.value = res.task_id;
-    statusColor.value = 'green';
-    statusLabel.value = '采集完成';
-    running.value = false;
+    statusColor.value = 'blue';
+    statusLabel.value = '运行中';
+    // 启动轮询任务状态
+    await pollTaskStatus(res.task_id);
   } catch (e) {
     statusColor.value = 'red';
     statusLabel.value = '提交失败: ' + e.message;

@@ -205,6 +205,19 @@ async def trigger_collector(
     return {"status": "accepted", "task_id": task_id}
 
 
+@router.post("/collector/{task_id}/cancel")
+async def cancel_collector(task_id: str):
+    """取消正在运行的采集任务。"""
+    task = _collector_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"任务不存在: {task_id}")
+    if task["status"] not in ("running", "pending"):
+        raise HTTPException(status_code=400, detail=f"任务已结束，状态: {task['status']}")
+
+    task["status"] = "cancelling"
+    return {"status": "cancelling", "message": "已发送停止信号"}
+
+
 @router.get("/collector/tasks")
 async def list_collector_tasks():
     """列出所有采集任务。"""
@@ -309,6 +322,9 @@ async def _run_app_scraper(task_id: str, params: dict) -> None:
     """后台运行 app_uiautomator2 采集器（同步，需在线程池中执行）。"""
     _collector_tasks[task_id]["status"] = "running"
 
+    def is_cancelled() -> bool:
+        return _collector_tasks.get(task_id, {}).get("status") == "cancelling"
+
     date_str = datetime.now().strftime("%Y-%m-%d")
     app_type = params.get("app_type", "boss")
     log_dir = get_project_root() / "backend" / "log"
@@ -320,22 +336,25 @@ async def _run_app_scraper(task_id: str, params: dict) -> None:
 
     try:
         loop = asyncio.get_event_loop()
-        output = await loop.run_in_executor(
+        was_cancelled = await loop.run_in_executor(
             None,
-            _sync_run_app_scraper,
-            task_id,
-            params,
+            lambda: _sync_run_app_scraper(task_id, params, is_cancelled),
         )
-        _collector_tasks[task_id]["status"] = "done"
-        _collector_tasks[task_id]["output"] = output
-        log("采集任务完成", level="INFO", task_id=task_id)
+        if was_cancelled:
+            _collector_tasks[task_id]["status"] = "cancelled"
+            _collector_tasks[task_id]["error"] = "用户主动取消"
+            log("采集任务已取消", level="INFO", task_id=task_id)
+        else:
+            _collector_tasks[task_id]["status"] = "done"
+            _collector_tasks[task_id]["output"] = "采集完成"
+            log("采集任务完成", level="INFO", task_id=task_id)
     except Exception as exc:
         _collector_tasks[task_id]["status"] = "error"
         _collector_tasks[task_id]["error"] = str(exc)
         log(f"采集失败: {exc}", level="ERROR", task_id=task_id)
 
 
-def _sync_run_app_scraper(task_id: str, params: dict) -> str:
+def _sync_run_app_scraper(task_id: str, params: dict, is_cancelled) -> bool:
     """同步执行 app_uiautomator2 采集（在线程池中调用）。"""
     from collection_platform.app_uiautomator2.launcher import run_app_scraper
 
@@ -349,12 +368,16 @@ def _sync_run_app_scraper(task_id: str, params: dict) -> str:
         money_min=params.get("money_min"),
         max_distance=params.get("max_distance"),
         task_id=task_id,
+        is_cancelled=is_cancelled,
     )
 
 
 async def _run_browser_scraper(task_id: str, params: dict) -> None:
     """后台运行 browser_playwright 采集器（本身就是 async）。"""
     _collector_tasks[task_id]["status"] = "running"
+
+    def is_cancelled() -> bool:
+        return _collector_tasks.get(task_id, {}).get("status") == "cancelling"
 
     date_str = datetime.now().strftime("%Y-%m-%d")
     log_dir = get_project_root() / "backend" / "log"
@@ -376,6 +399,7 @@ async def _run_browser_scraper(task_id: str, params: dict) -> None:
             delay=params.get("delay", 3.0),
             output_filename=params.get("output_filename", "scraped_data.json"),
             task_id=task_id,
+            is_cancelled=is_cancelled,
             detail_fields=params.get("detail_fields"),
             detail_container_selector=params.get("detail_container_selector"),
             detail_url_field=params.get("detail_url_field"),
@@ -386,9 +410,18 @@ async def _run_browser_scraper(task_id: str, params: dict) -> None:
             max_detail_retries=params.get("max_detail_retries", 2),
             continue_on_error=params.get("continue_on_error", True),
         )
-        _collector_tasks[task_id]["status"] = "done"
-        _collector_tasks[task_id]["output"] = output
-        log("采集任务完成", level="INFO", task_id=task_id)
+        if output is None and is_cancelled():
+            _collector_tasks[task_id]["status"] = "cancelled"
+            _collector_tasks[task_id]["error"] = "用户主动取消"
+            log("采集任务已取消", level="INFO", task_id=task_id)
+        elif output is None:
+            _collector_tasks[task_id]["status"] = "done"
+            _collector_tasks[task_id]["output"] = "未抓取到数据"
+            log("采集完成（无数据）", level="INFO", task_id=task_id)
+        else:
+            _collector_tasks[task_id]["status"] = "done"
+            _collector_tasks[task_id]["output"] = output
+            log("采集任务完成", level="INFO", task_id=task_id)
     except Exception as exc:
         _collector_tasks[task_id]["status"] = "error"
         _collector_tasks[task_id]["error"] = str(exc)

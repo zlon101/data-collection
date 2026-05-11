@@ -5,7 +5,7 @@ Merged Scraper Core Implementation
 
 import asyncio
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 from datetime import datetime
 from playwright.async_api import Page, TimeoutError as PlaywrightTimeout
 
@@ -18,7 +18,7 @@ from .config import MergedScraperConfig, NavigationMode
 class MergedScraper:
     """
     列表页与详情页合并抓取器
-    
+
     核心特性：
     1. 严格顺序执行：List Item A -> Detail A -> List Item B -> Detail B
     2. 数据不错配：每条记录携带唯一标识（list_page + item_index）
@@ -26,22 +26,25 @@ class MergedScraper:
     4. 错误隔离：单个详情页失败不影响其他项
     5. 状态追踪：完整记录每条数据的抓取状态
     """
-    
-    def __init__(self, page: Page, config: MergedScraperConfig):
+
+    def __init__(self, page: Page, config: MergedScraperConfig, is_cancelled: Callable[[], bool] | None = None):
         """
         初始化合并抓取器
-        
+
         Args:
             page: Playwright页面对象
             config: 合并抓取器配置
+            is_cancelled: 取消检查回调
         """
         self.page = page
         self.config = config
+        self.cancelled = False
+        self._is_cancelled = is_cancelled
         self.merged_data: List[Dict[str, Any]] = []
-        
-        # 创建列表页抓取器
-        self.list_scraper = UniversalScraper(page, config.list_config)
-        
+
+        # 创建列表页抓取器（传递取消检查）
+        self.list_scraper = UniversalScraper(page, config.list_config, is_cancelled=is_cancelled)
+
         # 统计信息
         self.stats = {
             "total_list_items": 0,
@@ -52,35 +55,48 @@ class MergedScraper:
             "end_time": None
         }
     
-    async def _extract_detail_url(self, list_item: Dict[str, Any]) -> Optional[str]:
+    async def _extract_detail_url(self, container) -> Optional[str]:
         """
-        从列表项中提取详情页URL
-        
+        从 DOM 中提取详情页URL
+
+        使用 list_config 中 detail_url_field 对应字段的 CSS 选择器，
+        提取 detail_url_attribute 指定的属性（默认 href）。
+
         Args:
-            list_item: 列表项数据
-            
+            container: 当前列表项的容器元素
+
         Returns:
             详情页URL，如果提取失败返回None
         """
-        url_value = list_item.get(self.config.detail_url_field)
-        
+        # 找到对应的 FieldConfig
+        url_field_config = None
+        for field in self.config.list_config.fields:
+            if field.name == self.config.detail_url_field:
+                url_field_config = field
+                break
+
+        if not url_field_config:
+            return None
+
+        locator = container.locator(url_field_config.selector)
+        count = await locator.count()
+        if count == 0:
+            return None
+
+        url_value = await locator.first.get_attribute(self.config.detail_url_attribute)
+
         if not url_value:
             return None
-        
-        # 如果是字符串，直接返回
-        if isinstance(url_value, str):
-            # 检查是否是有效URL
-            if url_value.startswith('http://') or url_value.startswith('https://'):
-                return url_value
-            # 相对URL，需要补全
-            elif url_value.startswith('/'):
-                base_url = self.page.url
-                from urllib.parse import urljoin
-                return urljoin(base_url, url_value)
-            else:
-                return None
-        
-        return None
+
+        # 处理相对URL
+        if url_value.startswith('http://') or url_value.startswith('https://'):
+            return url_value
+        elif url_value.startswith('/'):
+            base_url = self.page.url
+            from urllib.parse import urljoin
+            return urljoin(base_url, url_value)
+        else:
+            return None
     
     async def _scrape_detail_page(self, detail_url: str) -> Optional[Dict[str, Any]]:
         """
@@ -195,6 +211,7 @@ class MergedScraper:
     async def scrape_list_item_with_detail(
         self,
         list_item: Dict[str, Any],
+        container,
         item_index: int,
         page_num: int
     ) -> Dict[str, Any]:
@@ -205,9 +222,10 @@ class MergedScraper:
         1. 在单个函数调用中完成列表+详情的数据获取
         2. 使用唯一标识（page_num + item_index）追踪
         3. 原子性合并数据
-        
+
         Args:
             list_item: 列表项数据
+            container: 当前列表项的容器元素
             item_index: 项在当前列表页的索引
             page_num: 列表页码
             
@@ -230,8 +248,8 @@ class MergedScraper:
             }
         }
         
-        # 提取详情页URL
-        detail_url = await self._extract_detail_url(list_item)
+        # 从 DOM 提取详情页URL（使用原始CSS选择器和detail_url_attribute属性）
+        detail_url = await self._extract_detail_url(container)
         merged_item["metadata"]["detail_url"] = detail_url
         
         if not detail_url:
@@ -239,11 +257,12 @@ class MergedScraper:
             merged_item["metadata"]["scrape_status"] = "skipped"
             merged_item["metadata"]["error_message"] = "详情页URL为空"
             self.stats["skipped_details"] += 1
-            
+
             if self.config.skip_invalid_urls:
                 return merged_item
-        
+
         # 抓取详情页（带重试）
+        assert detail_url is not None
         detail_data = None
         retry_count = 0
         
@@ -314,11 +333,16 @@ class MergedScraper:
         self.stats["total_list_items"] += len(list_items)
         
         page_merged_data = []
-        
+
+        # 获取所有容器元素
+        containers = await self.page.locator(self.config.list_config.container_selector).all()
+
         # 顺序处理每个列表项
         for index, list_item in enumerate(list_items):
+            container = containers[index] if index < len(containers) else None
             merged_item = await self.scrape_list_item_with_detail(
                 list_item=list_item,
+                container=container,
                 item_index=index,
                 page_num=page_num
             )
@@ -347,8 +371,13 @@ class MergedScraper:
         """
         self.stats["start_time"] = datetime.now().isoformat()
         current_page = 1
-        
+
         while True:
+            if self._is_cancelled and self._is_cancelled():
+                self.cancelled = True
+                print("\n⚠️ 采集已取消")
+                break
+
             # 检查是否达到最大页数
             if self.config.list_config.max_pages > 0 and \
                current_page > self.config.list_config.max_pages:

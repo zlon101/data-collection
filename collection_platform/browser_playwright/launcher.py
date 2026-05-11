@@ -2,6 +2,7 @@
 browser_playwright 采集器启动入口。
 """
 
+from collections.abc import Callable
 from pathlib import Path
 
 from browser_playwright.browser import BrowserManager
@@ -24,6 +25,7 @@ async def run_browser_scraper(
     delay: float = 3.0,
     output_filename: str = "scraped_data.json",
     task_id: str | None = None,
+    is_cancelled: Callable[[], bool] | None = None,
     # 详情页抓取参数
     detail_fields: dict[str, str] | None = None,
     detail_container_selector: str | None = None,
@@ -34,8 +36,12 @@ async def run_browser_scraper(
     detail_page_wait_time: float = 2.0,
     max_detail_retries: int = 2,
     continue_on_error: bool = True,
-) -> str:
-    """执行 browser_playwright 采集，返回输出文件路径。"""
+) -> str | None:
+    """执行 browser_playwright 采集。
+
+    Returns:
+        输出文件路径（正常完成），None 表示被取消或无数据。
+    """
     log("连接浏览器...", task_id=task_id)
 
     async with BrowserManager(mode="connect") as bm:
@@ -78,13 +84,17 @@ async def run_browser_scraper(
                 max_detail_retries=max_detail_retries,
                 continue_on_error=continue_on_error,
             )
-            scraper = MergedScraper(page, merged_config)
+            scraper = MergedScraper(page, merged_config, is_cancelled=is_cancelled)
             log("开始抓取（列表+详情页模式）...", task_id=task_id)
             data = await scraper.scrape_from_current_page()
         else:
-            scraper = UniversalScraper(page, list_config)
+            scraper = UniversalScraper(page, list_config, is_cancelled=is_cancelled)
             log("开始抓取...", task_id=task_id)
             data = await scraper.scrape_from_current_page()
+
+        if scraper.cancelled:
+            log("采集任务已取消", level="INFO", task_id=task_id)
+            return None
 
         if data:
             output_path = Path("local_data") / "raw" / output_filename
@@ -93,4 +103,4 @@ async def run_browser_scraper(
             return str(output_path)
         else:
             log("未抓取到数据", level="WARNING", task_id=task_id)
-            return ""
+            return None

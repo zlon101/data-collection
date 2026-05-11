@@ -48,11 +48,24 @@
       <a-form-item label="详情容器选择器 (detail_container_selector)">
         <a-input v-model:value="params.detail_container_selector" placeholder="如: .article-content" />
       </a-form-item>
-      <a-form-item label="详情URL来源">
-        <a-select v-model:value="params.detail_url_field" placeholder="选择列表字段中包含详情页链接的字段" allow-clear>
-          <a-select-option v-for="f in validListFields" :key="f" :value="f">{{ f }}</a-select-option>
-        </a-select>
-      </a-form-item>
+      <a-row :gutter="16">
+        <a-col :span="12">
+          <a-form-item label="详情URL来源">
+            <a-select v-model:value="params.detail_url_field" placeholder="选择列表字段中包含详情页链接的字段" allow-clear>
+              <a-select-option v-for="f in validListFields" :key="f" :value="f">{{ f }}</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :span="12">
+          <a-form-item label="详情URL属性 (detail_url_attribute)">
+            <a-select v-model:value="params.detail_url_attribute" placeholder="提取属性">
+              <a-select-option value="href">href</a-select-option>
+              <a-select-option value="src">src</a-select-option>
+              <a-select-option value="data-src">data-src</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
       <a-row :gutter="16">
         <a-col :span="8">
           <a-form-item label="导航模式">
@@ -113,6 +126,7 @@ const params = ref({
   detail_fields: [],
   detail_container_selector: '',
   detail_url_field: undefined,
+  detail_url_attribute: 'href',
   navigation_mode: 'go_back',
   back_wait_time: 2.0,
   detail_page_wait_time: 2.0,
@@ -167,7 +181,7 @@ defineExpose({
         detail_fields: detailFields,
         detail_container_selector: params.value.detail_container_selector,
         detail_url_field: params.value.detail_url_field,
-        detail_url_attribute: params.value.detail_url_attribute || 'href',
+        detail_url_attribute: params.value.detail_url_attribute,
         navigation_mode: params.value.navigation_mode,
         back_wait_time: params.value.back_wait_time,
         detail_page_wait_time: params.value.detail_page_wait_time,

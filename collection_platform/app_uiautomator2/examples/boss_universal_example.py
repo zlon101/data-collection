@@ -12,7 +12,7 @@ import random
 import re
 import time
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 import uiautomator2 as u2
 from rich.console import Console
@@ -42,6 +42,7 @@ def main(
     money_min: float | None = None,
     max_distance: float | None = None,
     task_id: str | None = None,
+    is_cancelled: Callable[[], bool] | None = None,
 ):
     from app_uiautomator2.examples.config import (
         BlackCompany,
@@ -215,6 +216,7 @@ def main(
         item_filter=item_filter,
         max_items=max_items,
         format_data=format_data,
+        is_cancelled=is_cancelled,
     )
 
     if task_id:
@@ -233,11 +235,17 @@ def main(
     # 30 条耗时9分钟
     console.print(f"耗时: {elapsed:.2f} 分")
 
+    if list_spider.cancelled:
+        if task_id:
+            from common.logger import log
+            log("采集已取消", task_id=task_id)
+        return True
+
     if task_id:
         from common.logger import log
         log(f"采集完成，已保存至 {output_file}", task_id=task_id)
 
-    return output_file
+    return False
 
 
 if __name__ == "__main__":

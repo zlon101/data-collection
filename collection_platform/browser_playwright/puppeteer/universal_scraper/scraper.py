@@ -5,7 +5,7 @@
 
 import asyncio
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, asdict
 from playwright.async_api import Page
 
@@ -35,18 +35,21 @@ class ScraperConfig:
 
 class UniversalScraper:
     """通用网页数据抓取器"""
-    
-    def __init__(self, page: Page, config: ScraperConfig):
+
+    def __init__(self, page: Page, config: ScraperConfig, is_cancelled: Callable[[], bool] | None = None):
         """
         初始化抓取器
-        
+
         Args:
             page: Playwright页面对象
             config: 抓取器配置
+            is_cancelled: 取消检查回调
         """
         self.page = page
         self.config = config
         self.all_data: List[Dict[str, Any]] = []
+        self.cancelled = False
+        self._is_cancelled = is_cancelled
     
     async def scrape_current_page(self) -> List[Dict[str, Any]]:
         """
@@ -129,13 +132,18 @@ class UniversalScraper:
     async def scrape_with_pagination(self) -> List[Dict[str, Any]]:
         """
         抓取分页数据
-        
+
         Returns:
             所有页面的数据
         """
         current_page = 1
-        
+
         while True:
+            if self._is_cancelled and self._is_cancelled():
+                self.cancelled = True
+                print("⚠️ 采集已取消")
+                break
+
             # 检查是否达到最大页数
             if self.config.max_pages > 0 and current_page > self.config.max_pages:
                 print(f"✅ 达到最大页数: {self.config.max_pages}")

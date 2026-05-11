@@ -3,6 +3,8 @@ app_uiautomator2 采集器启动入口。
 根据 app_type 分别调用 Boss 或 智联 采集逻辑。
 """
 
+from collections.abc import Callable
+
 from app_uiautomator2.examples.boss_universal_example import main as boss_main
 from app_uiautomator2.examples.zhilian_example import main as zhilian_main
 
@@ -26,8 +28,12 @@ def run_app_scraper(
     money_min: float | None = None,
     max_distance: float | None = None,
     task_id: str | None = None,
-) -> str:
+    is_cancelled: Callable[[], bool] | None = None,
+) -> bool:
     """执行 app_uiautomator2 采集。
+
+    Returns:
+        True 表示被取消，False 表示正常完成。
 
     Args:
         app_type: "boss" 或 "zhilian"
@@ -46,6 +52,7 @@ def run_app_scraper(
             money_min=money_min,
             max_distance=max_distance,
             task_id=task_id,
+            is_cancelled=is_cancelled,
         )
     else:
         return zhilian_main(
@@ -56,4 +63,5 @@ def run_app_scraper(
             money_min=money_min,
             max_distance=max_distance,
             task_id=task_id,
+            is_cancelled=is_cancelled,
         )
