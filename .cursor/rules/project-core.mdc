@@ -1,0 +1,34 @@
+---
+description: 项目核心约定：架构、I/O、日志、运行方式
+alwaysApply: true
+---
+
+# 数据采集工作站 — 核心约定
+
+轻量级全栈采集与分析 Monorepo（uv Workspace）。数据流：采集器 → `local_data/raw|job` → AI 分析 → `local_data/analyzed` → 前端可视化。
+
+## 硬性规范（见 `docs/开发规范.md`）
+
+- 文件读写必须走 `common/file_manager.py`，禁止 `open()` / `Path.read_*` / `Path.write_*`
+- 日志必须用 `common.logger.log()`，禁止裸 `print()` / `logging.info()`
+- 禁止 `sys.path.insert`；workspace 包按包名导入
+
+## 运行约定
+
+- **所有命令从项目根目录执行**（`npm` 项目除外）
+- Workspace：`uv run --package <pkg> ...`；app_airtest：`uv run --directory collection_platform/app_airtest ...`
+- 后端：`uv run uvicorn backend.main:app --reload --port 8000`
+- 前端：`cd frontend && npm run dev`
+
+## 包导入
+
+| 目录 | 包名 |
+|------|------|
+| `browser_playwright/` | `browser_playwright` |
+| `app_uiautomator2/` | `app_uiautomator2` |
+| `wx/` | `wx` |
+| `ai_agent/` | `ai_agent` |
+| `common/` | `common` |
+
+详细架构见 `CLAUDE.md` / `README.md`；Agent 文档索引见 `docs/Agent指南.md`。改代码前优先读相关模块现有实现。
+正文文档只维护在 `docs/`；`AGENTS.md` 仅作引用入口。

@@ -1,0 +1,33 @@
+---
+description: Python 3.11+ 类型与模块约定
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python 规范
+
+要求 `>=3.11.8`，使用现代类型语法，禁止 `typing` 旧别名：
+
+```python
+# ✅
+def foo(items: list[str], x: int | None = None) -> dict[str, Any] | None: ...
+
+# ❌ List[str], Optional[int], Dict[str, Any], Union[...]
+```
+
+- 协议类型用 `collections.abc`（`Callable` / `Iterator` / `Sequence`）
+- 返回 `None` 必须显式：`-> None`
+- 优先 `@dataclass` 传数据，少用裸 `dict`
+- 覆写方法用 `@override`（3.12+ 可用时）
+
+## I/O 与日志示例
+
+```python
+from common import file_manager
+from common.logger import log
+
+file_manager.write_json(data, "wechat_x_20260101.json", data_type="raw")
+log("采集完成", level="INFO", task_id=task_id)
+```
+
+任意路径用 `read_json_path` / `write_json_path` / `read_text` / `write_text`。

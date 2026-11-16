@@ -1,0 +1,23 @@
+---
+description: 采集模块与 launcher 约定
+globs: "collection_platform/**/*.py"
+alwaysApply: false
+---
+
+# 采集模块规范
+
+后端通过各包 `launcher.py` 异步触发采集，支持取消（cancelling）。
+
+| 包 | 用途 | 执行 |
+|----|------|------|
+| `browser_playwright` | Playwright 网页采集 | `uv run --package browser-playwright ...` |
+| `app_uiautomator2` | Boss/智联等 App | `uv run --package app-script ...` |
+| `wx` | 公众号/招聘分析 | `uv run --package data-collection-platform -m wx...` |
+| `app_airtest` | 独立 venv（numpy<2） | `uv run --directory collection_platform/app_airtest ...` |
+
+## 注意
+
+- 结果写入 `local_data/`，经 `common.file_manager`
+- Job 合并去重：`app_uiautomator2.tools.merge_job_data`
+- Playwright 模式由 `.env` 的 `BROWSER_MODE`（`launch` / `connect`）控制
+- 新增采集能力时优先扩展现有 scraper/lib，并保证可通过后端 `/api/collector` 调用

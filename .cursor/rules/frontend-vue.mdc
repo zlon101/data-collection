@@ -1,0 +1,15 @@
+---
+description: Vue3 前端约定（Vite + Ant Design Vue）
+globs: "frontend/**/*.{vue,js}"
+alwaysApply: false
+---
+
+# Frontend 规范
+
+- Vue 3 + Vite；UI 为 **Ant Design Vue**（非 Element Plus）
+- API 统一走 `frontend/src/api/client.js`（axios，`baseURL: '/api'`）
+- 页面：`views/Crawler.vue`（采集）、`views/Query.vue`（查询分析）
+- 表单按平台拆分：`AppCrawlerForm` → `BossForm` / `ZhilianForm`；浏览器用 `BrowserCrawlerForm`
+- 格式化：Prettier（见 `.prettierrc`、`.vscode/settings.json`），缩进 2 空格
+- 新组件放 `frontend/src/components/`，保持与现有弹窗/表单风格一致
+- 图表用 ECharts；消息提示用 `message` from `ant-design-vue`

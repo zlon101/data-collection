@@ -1,0 +1,11 @@
+---
+description: 文档在 docs 维护；AGENTS.md 只引用
+alwaysApply: true
+---
+
+# 文档与 AGENTS.md
+
+- **所有说明性文档**在 `docs/` 中维护（规范、方案、需求、Agent 指南等）
+- 根目录 `AGENTS.md` **只引用**需要的文档链接，不写完整正文、不复制规范细节
+- 新增/修改约定：先更新 `docs/`，再按需在 `AGENTS.md` 增加或调整引用
+- Agent 协作说明见 `docs/Agent指南.md`
