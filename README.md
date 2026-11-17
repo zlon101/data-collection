@@ -2,6 +2,13 @@
 
 Python + Vue3 的采集与分析 Monorepo（**uv Workspace**）：网页 / App 采集、LLM 结构化分析、招聘 Job 查询。架构与流程详见 [docs/技术方案.md](docs/技术方案.md)。
 
+## 使用
+
+- 采集 `https://xxx` 网页中 "近期报名"（`.div_ExamList.com_Box`） 模块的信息，包含 “标题”、“报名时间”、“状态”
+
+- 采集  https://xxx 网页中列表数据，要求采集前2页数据，字段包含「标题」「时间」
+
+
 ## 技术栈
 
 | 模块 | 技术 |
