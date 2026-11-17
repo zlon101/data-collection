@@ -15,7 +15,7 @@ async def find_chrome_cdp_url(ports: list[int] | None = None) -> str | None:
         None: 如果未找到可用端口
     """
     if ports is None:
-        ports = [9422, 9222, 9223, 9224]
+        ports = [9222, 9422, 9223, 9224]
     try:
         import aiohttp
     except ImportError:

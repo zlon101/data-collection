@@ -12,7 +12,7 @@ from playwright.async_api import Page, TimeoutError as PlaywrightTimeout
 from common.file_manager import write_json_path
 
 from ..universal_scraper import UniversalScraper, FieldConfig
-from .config import MergedScraperConfig, NavigationMode
+from .config import DetailEntryMode, MergedScraperConfig, NavigationMode
 
 
 class MergedScraper:
@@ -95,7 +95,34 @@ class MergedScraper:
             base_url = self.page.url
             from urllib.parse import urljoin
             return urljoin(base_url, url_value)
-        else:
+        if url_value.startswith("javascript:"):
+            return None
+        return None
+
+    async def _extract_detail_fields_from_page(self) -> dict[str, Any]:
+        await self.page.wait_for_selector(
+            self.config.detail_container_selector,
+            timeout=15000,
+        )
+        await asyncio.sleep(self.config.detail_page_wait_time)
+        detail_data: dict[str, Any] = {}
+        for field in self.config.detail_fields:
+            try:
+                detail_data[field.name] = await self._extract_detail_field(field)
+            except Exception as e:
+                print(f"      ⚠️ 提取详情字段失败 [{field.name}]: {e}")
+                detail_data[field.name] = None
+        return detail_data
+
+    async def _scrape_detail_by_click(self, container) -> Optional[Dict[str, Any]]:
+        try:
+            await container.click()
+            return await self._extract_detail_fields_from_page()
+        except PlaywrightTimeout as e:
+            print(f"      ❌ 点击进入详情页超时: {str(e)[:100]}")
+            return None
+        except Exception as e:
+            print(f"      ❌ 点击进入详情页失败: {str(e)[:100]}")
             return None
     
     async def _scrape_detail_page(self, detail_url: str) -> Optional[Dict[str, Any]]:
@@ -111,27 +138,7 @@ class MergedScraper:
         try:
             # 导航到详情页
             await self.page.goto(detail_url, wait_until="domcontentloaded", timeout=30000)
-            
-            # 等待详情页容器加载
-            await self.page.wait_for_selector(
-                self.config.detail_container_selector,
-                timeout=15000
-            )
-            
-            # 额外等待时间
-            await asyncio.sleep(self.config.detail_page_wait_time)
-            
-            # 提取详情页字段
-            detail_data = {}
-            for field in self.config.detail_fields:
-                try:
-                    value = await self._extract_detail_field(field)
-                    detail_data[field.name] = value
-                except Exception as e:
-                    print(f"      ⚠️ 提取详情字段失败 [{field.name}]: {e}")
-                    detail_data[field.name] = None
-            
-            return detail_data
+            return await self._extract_detail_fields_from_page()
             
         except PlaywrightTimeout as e:
             print(f"      ❌ 详情页加载超时: {str(e)[:100]}")
@@ -248,21 +255,19 @@ class MergedScraper:
             }
         }
         
-        # 从 DOM 提取详情页URL（使用原始CSS选择器和detail_url_attribute属性）
-        detail_url = await self._extract_detail_url(container)
-        merged_item["metadata"]["detail_url"] = detail_url
-        
-        if not detail_url:
-            print(f"      ⚠️ 未找到详情页URL")
-            merged_item["metadata"]["scrape_status"] = "skipped"
-            merged_item["metadata"]["error_message"] = "详情页URL为空"
-            self.stats["skipped_details"] += 1
+        use_click = self.config.detail_entry == DetailEntryMode.CLICK
+        detail_url = None
+        if not use_click:
+            detail_url = await self._extract_detail_url(container)
+            merged_item["metadata"]["detail_url"] = detail_url
+            if not detail_url:
+                print(f"      ⚠️ 未找到详情页URL")
+                merged_item["metadata"]["scrape_status"] = "skipped"
+                merged_item["metadata"]["error_message"] = "详情页URL为空"
+                self.stats["skipped_details"] += 1
+                if self.config.skip_invalid_urls:
+                    return merged_item
 
-            if self.config.skip_invalid_urls:
-                return merged_item
-
-        # 抓取详情页（带重试）
-        assert detail_url is not None
         detail_data = None
         retry_count = 0
         
@@ -271,7 +276,13 @@ class MergedScraper:
                 print(f"      🔄 重试第 {retry_count} 次...")
             
             try:
-                detail_data = await self._scrape_detail_page(detail_url)
+                if use_click:
+                    if container is None:
+                        raise RuntimeError("列表项容器为空，无法点击进入详情")
+                    detail_data = await self._scrape_detail_by_click(container)
+                else:
+                    assert detail_url is not None
+                    detail_data = await self._scrape_detail_page(detail_url)
                 
                 if detail_data:
                     print(f"      ✓ 详情页抓取成功")
@@ -334,11 +345,11 @@ class MergedScraper:
         
         page_merged_data = []
 
-        # 获取所有容器元素
-        containers = await self.page.locator(self.config.list_config.container_selector).all()
-
-        # 顺序处理每个列表项
+        # 顺序处理每个列表项（每次返回列表后重新取 locator，避免 stale）
         for index, list_item in enumerate(list_items):
+            containers = await self.page.locator(
+                self.config.list_config.container_selector
+            ).all()
             container = containers[index] if index < len(containers) else None
             merged_item = await self.scrape_list_item_with_detail(
                 list_item=list_item,

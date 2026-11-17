@@ -1,0 +1,24 @@
+[project]
+name = "scrape-agent"
+version = "0.1.0"
+description = "LangGraph agent: propose browser_playwright config via Crawl4AI, sample, then full scrape"
+requires-python = ">=3.11.8"
+dependencies = [
+    "browser-playwright",
+    "ai-agent",
+    "common",
+    "crawl4ai>=0.6.0",
+    "langgraph>=1.0.5",
+    "langchain-core>=0.3.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.setuptools]
+packages = ["scrape_agent", "scrape_agent.nodes"]
+package-dir = { scrape_agent = "." }
+
+[tool.uv.sources]
+browser-playwright = { workspace = true }
+ai-agent = { workspace = true }
+common = { workspace = true }

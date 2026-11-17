@@ -31,6 +31,7 @@ async def run_browser_scraper(
     detail_container_selector: str | None = None,
     detail_url_field: str | None = None,
     detail_url_attribute: str = "href",
+    detail_entry: str = "url",
     navigation_mode: str = "go_back",
     back_wait_time: float = 2.0,
     detail_page_wait_time: float = 2.0,
@@ -65,19 +66,19 @@ async def run_browser_scraper(
         enable_detail = (
             detail_fields is not None
             and detail_container_selector is not None
-            and detail_url_field is not None
+            and (detail_entry == "click" or detail_url_field is not None)
         )
 
         if enable_detail:
             assert detail_fields is not None
             assert detail_container_selector is not None
-            assert detail_url_field is not None
             merged_config = create_merged_scraper_config(
                 list_config=list_config,
                 detail_fields=detail_fields,
                 detail_container_selector=detail_container_selector,
-                detail_url_field=detail_url_field,
+                detail_url_field=detail_url_field or "",
                 detail_url_attribute=detail_url_attribute,
+                detail_entry=detail_entry,
                 navigation_mode=navigation_mode,
                 back_wait_time=back_wait_time,
                 detail_page_wait_time=detail_page_wait_time,

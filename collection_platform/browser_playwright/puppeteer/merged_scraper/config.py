@@ -14,6 +14,12 @@ class NavigationMode(Enum):
     NEW_TAB = "new_tab"  # 使用新标签页
 
 
+class DetailEntryMode(Enum):
+    """进入详情页的方式"""
+    URL = "url"  # 从列表项提取 http(s) URL 后 goto
+    CLICK = "click"  # href 为 javascript:void(0) 等时，点击列表项进入
+
+
 @dataclass
 class MergedScraperConfig:
     """
@@ -32,8 +38,9 @@ class MergedScraperConfig:
     # ========== 详情页配置 ==========
     detail_fields: List[FieldConfig]  # 详情页要抓取的字段
     detail_container_selector: str  # 详情页容器选择器（用于等待页面加载）
-    detail_url_field: str  # 列表数据中哪个字段是详情页URL
+    detail_url_field: str = ""  # 列表数据中哪个字段是详情页URL（CLICK 模式可空）
     detail_url_attribute: str = "href"  # 详情URL的属性（默认href）
+    detail_entry: DetailEntryMode = DetailEntryMode.URL  # url 或 click
     
     # ========== 导航配置 ==========
     navigation_mode: NavigationMode = NavigationMode.GO_BACK  # 导航模式
@@ -60,24 +67,24 @@ class MergedScraperConfig:
         if not self.detail_container_selector:
             raise ValueError("detail_container_selector 不能为空")
         
-        if not self.detail_url_field:
-            raise ValueError("detail_url_field 不能为空")
-        
-        # 验证detail_url_field是否在list_config的fields中
-        list_field_names = [field.name for field in self.list_config.fields]
-        if self.detail_url_field not in list_field_names:
-            raise ValueError(
-                f"detail_url_field '{self.detail_url_field}' "
-                f"必须是list_config.fields中的一个字段"
-            )
+        if self.detail_entry == DetailEntryMode.URL:
+            if not self.detail_url_field:
+                raise ValueError("URL 模式下 detail_url_field 不能为空")
+            list_field_names = [field.name for field in self.list_config.fields]
+            if self.detail_url_field not in list_field_names:
+                raise ValueError(
+                    f"detail_url_field '{self.detail_url_field}' "
+                    f"必须是list_config.fields中的一个字段"
+                )
 
 
 def create_merged_scraper_config(
     list_config: ScraperConfig,
     detail_fields: dict,  # {"字段名": "CSS选择器"}
     detail_container_selector: str,
-    detail_url_field: str,
+    detail_url_field: str = "",
     detail_url_attribute: str = "href",
+    detail_entry: str = "url",
     navigation_mode: str = "go_back",
     back_wait_time: float = 2.0,
     detail_page_wait_time: float = 2.0,
@@ -110,13 +117,17 @@ def create_merged_scraper_config(
     
     # 转换导航模式
     nav_mode = NavigationMode.GO_BACK if navigation_mode == "go_back" else NavigationMode.NEW_TAB
-    
+    entry_mode = (
+        DetailEntryMode.CLICK if detail_entry == "click" else DetailEntryMode.URL
+    )
+
     return MergedScraperConfig(
         list_config=list_config,
         detail_fields=detail_field_configs,
         detail_container_selector=detail_container_selector,
         detail_url_field=detail_url_field,
         detail_url_attribute=detail_url_attribute,
+        detail_entry=entry_mode,
         navigation_mode=nav_mode,
         back_wait_time=back_wait_time,
         detail_page_wait_time=detail_page_wait_time,

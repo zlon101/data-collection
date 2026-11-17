@@ -39,7 +39,7 @@ class BrowserManager:
         self.mode = mode
         self.headless = headless
         self.cdp_url = cdp_url = os.getenv("CDP_URL") or cdp_url
-        self.cdp_ports = cdp_ports if cdp_ports is not None else [9222, 9223, 9224]
+        self.cdp_ports = cdp_ports if cdp_ports is not None else [9222, 9422, 9223, 9224]
         
         self.browser: Browser | None = None
         self.playwright: "Playwright" | None = None
@@ -82,30 +82,40 @@ class BrowserManager:
         """连接到已有的 Chrome 实例"""
         assert self.playwright is not None, "Playwright not initialized"
         
-        # 如果未指定 CDP URL，自动检测
-        if not self.cdp_url:
-            print("🔍 Auto-detecting Chrome CDP endpoint...")
-            self.cdp_url = await find_chrome_cdp_url(self.cdp_ports)
-            
-            if not self.cdp_url:
-                raise ConnectionError(
-                    "❌ No Chrome instance found with remote debugging enabled.\n"
-                    "💡 Start Chrome with: chrome.exe --remote-debugging-port=9222\n"
-                    f"   Tried ports: {self.cdp_ports}"
+        last_error: Exception | None = None
+        tried: list[str] = []
+
+        async def try_connect(url: str) -> Browser | None:
+            nonlocal last_error
+            tried.append(url)
+            print(f"🔌 Connecting to Chrome at {url}...")
+            try:
+                return await self.playwright.chromium.connect_over_cdp(
+                    url,
+                    timeout=10000,
                 )
-        
-        print(f"🔌 Connecting to Chrome at {self.cdp_url}...")
-        
-        try:
-            browser = await self.playwright.chromium.connect_over_cdp(
-                self.cdp_url,
-                timeout=10000  # 10秒超时
-            )
-            return browser
-        except Exception as e:
-            raise ConnectionError(
-                f"Failed to connect to Chrome at {self.cdp_url}: {str(e)}"
-            )
+            except Exception as e:
+                last_error = e
+                print(f"⚠️  CDP 不可用: {url}")
+                return None
+
+        if self.cdp_url:
+            browser = await try_connect(self.cdp_url)
+            if browser:
+                return browser
+
+        print("🔍 Auto-detecting Chrome CDP endpoint...")
+        detected = await find_chrome_cdp_url(self.cdp_ports)
+        if detected and detected not in tried:
+            browser = await try_connect(detected)
+            if browser:
+                self.cdp_url = detected
+                return browser
+
+        raise ConnectionError(
+            "无法连接已开启远程调试的 Chrome。请先运行 ./scripts/run_chrome.sh 并打开目标网页。\n"
+            f"Tried: {tried or self.cdp_ports}. Last error: {last_error}"
+        )
     
     async def get_or_create_page(self, target_url: str | None = None) -> Page:
         """

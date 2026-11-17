@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [tool.uv]
-workspace = { members = ["backend", "ai_agent", "collection_platform/browser_playwright", "collection_platform/app_uiautomator2", "collection_platform/wx", "visualization", "common"] }
+workspace = { members = ["backend", "ai_agent", "collection_platform/browser_playwright", "collection_platform/app_uiautomator2", "collection_platform/wx", "visualization", "common", "scrape_agent"] }
 
 [tool.uv.sources]
 wx = { workspace = true }
