@@ -1,0 +1,16 @@
+[project]
+name = "cursor-sdk-demo"
+version = "0.1.0"
+description = "Cursor SDK demo: extract image content as HTML"
+requires-python = ">=3.11.8"
+dependencies = [
+    "common",
+    "cursor-sdk",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.setuptools]
+packages = ["cursor_sdk_demo"]
+
+[tool.uv.sources]
+common = { workspace = true }
